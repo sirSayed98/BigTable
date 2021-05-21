@@ -1,8 +1,9 @@
-
-
 const mongoose = require("mongoose");
 
 const MovieSchema = new mongoose.Schema({
+  _id: {
+    type: Number,
+  },
   budget: {
     type: Number,
   },
@@ -24,23 +25,23 @@ const MovieSchema = new mongoose.Schema({
   tagline: {
     type: String,
   },
-  keywords:{
-    type: String
+  keywords: {
+    type: String,
   },
-  overview:{
-    type: String
+  overview: {
+    type: String,
   },
-  genres:{
-    type: String
+  genres: {
+    type: String,
   },
-  production_companies:{
-    type: String
+  production_companies: {
+    type: String,
   },
-  vote_average:{
-      type:Number
+  vote_average: {
+    type: Number,
   },
-  release_year:{
-      type:String
+  release_year: {
+    type: String,
   },
   createdAt: {
     type: Date,

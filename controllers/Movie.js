@@ -6,7 +6,7 @@ const Movie = require("../models/Movie");
 exports.getMovies = asyncHandler(async (req, res, next) => {
   
 
-  const Movies = await Movie.find().limit(5);
+  const Movies = await Movie.find().limit(20);
 
   console.log("________")
   res.status(200).json({

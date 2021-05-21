@@ -18,7 +18,7 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Read JSON files
 const movies = JSON.parse(
-  fs.readFileSync(`${__dirname}/_data/Data.json`, 'utf-8')
+  fs.readFileSync(`${__dirname}/_data/data.json`, 'utf-8')
 );
 
 
