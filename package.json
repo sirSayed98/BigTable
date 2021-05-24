@@ -2,11 +2,11 @@
   "name": "bigtable",
   "version": "1.0.0",
   "description": "BigTable Simulation",
-  "main": "master.js",
+  "main": "TabletServer1.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node master.js",
-    "server": "nodemon master.js"
+    "start": "node TabletServer1.js",
+    "server": "nodemon TabletServer1.js"
   },
   "repository": {
     "type": "git",

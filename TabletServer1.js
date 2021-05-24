@@ -1,31 +1,34 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
-const connectDB = require("./config/db");
 const errorHandler = require("./middleware/error");
+//const connectMultiple = require("./config/multibleDb");
+
 // Load env vars
 dotenv.config({ path: "./config/.env" });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.TABLET_SERVER_ONE_PORT || 4000;
 const app = express();
+
+// Connect to database
+
+
+
+//connectMultiple(process.env.TABLET_SERVER_ONE_CONN, "one");
+//connectMultiple(process.env.TABLET_SERVER_ONE_ONE_CONN, "two");
+
+
 
 // Dev logging middleware
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// Connect to database
-connectDB(process.env.MONGO_URI);
-
-
 // load Routers
-const Movies = require("./routes/Movie");
+const MoviesRouter = require("./routes/MovieMul");
 
 //mount routes
-app.use("/Movies", Movies);
-
-
-
+app.use("/Movies/Tablet1", MoviesRouter);
 
 // errorHandler
 app.use(errorHandler);
