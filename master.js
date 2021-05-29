@@ -32,48 +32,29 @@ const server = app.listen(
   console.log(`Master Server running on port ${PORT}`)
 );
 const io = Socket(server);
-let tabletServerCounter = 0;
-
-
-var tabletServers = [];
-var numOfTablets = 0;
+let configData = {
+  tabletServerCounter: 0,
+  numOfTablets: 0,
+  tabletServers: [],
+};
 
 //_______________________________SOCKET____________________________________
 
-io.on("connection", function (socket) {
-  //console.log(io.engine.clientsCount)
-  tabletServerCounter++;
-  console.log("[SERVER] Master has been instailized socket");
+const { configuration } = require("./controllers/MovieMaster");
 
-  socket.on("status", function (data) {
-    var tabletServer = {
-      clientID: tabletServerCounter,
-      tablets: data.tabletCount,
-    };
+const onConnection = (socket) => {
+  configuration(socket, configData);
+};
 
-    tabletServers.push(tabletServer);
-    tabletServers.map((el) => {
-      numOfTablets += el.tablets;
-    });
+io.on("connection", onConnection);
 
-    //console.log(numOfTablets);
-    console.log(`[SERVER] System has ${numOfTablets} tablets.`);
-  });
-
-  console.log(
-    `[SERVER] one of tablet servers has been 
-    connected # tabletServers = ${tabletServerCounter}`
-  );
-});
-
-io.on("disconnect", function () {
-  tabletServerCounter--;
-  console.log(
-    `[SERVER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
-  );
-});
+// io.on("disconnect", function () {
+//   tabletServerCounter--;
+//   console.log(
+//     `[SERVER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
+//   );
+// });
 //________________________________________________________________
-
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
