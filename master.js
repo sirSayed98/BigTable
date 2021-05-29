@@ -31,12 +31,49 @@ const server = app.listen(
   PORT,
   console.log(`Master Server running on port ${PORT}`)
 );
-
 const io = Socket(server);
+let tabletServerCounter = 0;
+
+
+var tabletServers = [];
+var numOfTablets = 0;
+
+//_______________________________SOCKET____________________________________
 
 io.on("connection", function (socket) {
-  console.log("Master has been instailized socket");
+  //console.log(io.engine.clientsCount)
+  tabletServerCounter++;
+  console.log("[SERVER] Master has been instailized socket");
+
+  socket.on("status", function (data) {
+    var tabletServer = {
+      clientID: tabletServerCounter,
+      tablets: data.tabletCount,
+    };
+
+    tabletServers.push(tabletServer);
+    tabletServers.map((el) => {
+      numOfTablets += el.tablets;
+    });
+
+    //console.log(numOfTablets);
+    console.log(`[SERVER] System has ${numOfTablets} tablets.`);
+  });
+
+  console.log(
+    `[SERVER] one of tablet servers has been 
+    connected # tabletServers = ${tabletServerCounter}`
+  );
 });
+
+io.on("disconnect", function () {
+  tabletServerCounter--;
+  console.log(
+    `[SERVER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
+  );
+});
+//________________________________________________________________
+
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
