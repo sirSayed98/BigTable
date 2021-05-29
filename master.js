@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/error");
+const Socket = require("socket.io");
 // Load env vars
 dotenv.config({ path: "./config/.env" });
 
@@ -17,23 +18,25 @@ if (process.env.NODE_ENV === "development") {
 // Connect to database
 connectDB(process.env.MONGO_URI);
 
-
 // load Routers
 const Movies = require("./routes/Movie");
 
 //mount routes
 app.use("/Movies", Movies);
 
-
-
-
 // errorHandler
 app.use(errorHandler);
 
 const server = app.listen(
   PORT,
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
+  console.log(`Master Server running on port ${PORT}`)
 );
+
+const io = Socket(server);
+
+io.on("connection", function (socket) {
+  console.log("Master has been instailized socket");
+});
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {

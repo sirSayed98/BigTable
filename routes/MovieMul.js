@@ -2,7 +2,7 @@ const express = require("express");
 const {
   getMoviesMul,
 
-} = require("../controllers/MovieMul");
+} = require("../controllers/MovieTabletServer");
 
 const router = express.Router();
 

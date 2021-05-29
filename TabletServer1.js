@@ -2,22 +2,13 @@ const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
 const errorHandler = require("./middleware/error");
-//const connectMultiple = require("./config/multibleDb");
+
 
 // Load env vars
 dotenv.config({ path: "./config/.env" });
 
 const PORT = process.env.TABLET_SERVER_ONE_PORT || 4000;
 const app = express();
-
-// Connect to database
-
-
-
-//connectMultiple(process.env.TABLET_SERVER_ONE_CONN, "one");
-//connectMultiple(process.env.TABLET_SERVER_ONE_ONE_CONN, "two");
-
-
 
 // Dev logging middleware
 if (process.env.NODE_ENV === "development") {
@@ -35,8 +26,10 @@ app.use(errorHandler);
 
 const server = app.listen(
   PORT,
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
+  console.log(`Tablet Server1 running on port ${PORT}`)
 );
+
+
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
