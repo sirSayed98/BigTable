@@ -2,12 +2,13 @@ const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const io = require("socket.io-client");
 const dotenv = require("dotenv");
+const { connectToDB } = require("../config/MovieTabletServerConnect");
 dotenv.config({ path: "../config/.env" });
 
 const Socket = io.connect(process.env.MASTER_SERVER_HOST);
 
-const MovieTablet1 = require("../models/TabletServer1.1");
-const MovieTablet2 = require("../models/TabletServer1.2");
+const MovieTablet1 = connectToDB(process.env.TABLET_SERVER_ONE_ONE_CONN, 1);
+const MovieTablet2 = connectToDB(process.env.TABLET_SERVER_ONE_TWO_CONN, 2);
 
 Socket.on("connect", function (so) {
   console.log(

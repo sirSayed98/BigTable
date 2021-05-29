@@ -1,19 +1,18 @@
 const mongoose = require("mongoose");
 
-const connectMultiple = async (connectionString, host = "one") => {
+exports.connectToDB = (connectionString, tabletNumber) => {
   try {
-    const conn = await mongoose.createConnection(connectionString, {
+    const conn = mongoose.createConnection(connectionString, {
       useNewUrlParser: true,
       useCreateIndex: true,
       useFindAndModify: false,
       useUnifiedTopology: true,
     });
+    conn.model("Movie", require("../models/MovieMul"));
 
-    console.log(`MongoDB Connected ${host}`);
+    console.log(`MongoDB Connected tablet ${tabletNumber}`);
     return conn;
   } catch (error) {
     console.log(error);
   }
 };
-
-module.exports = connectMultiple;
