@@ -31,7 +31,6 @@ Socket.on("recieveData", async function (data) {
     await MovieTablet1.db.collection("Movie").insertMany(part1);
     await MovieTablet2.db.collection("Movie").insertMany(part2);
   }, 5000);
-  
 });
 
 exports.getMoviesMul = asyncHandler(async (req, res, next) => {
@@ -42,6 +41,7 @@ exports.getMoviesMul = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
+    count: films.length,
     data: films,
   });
 });
