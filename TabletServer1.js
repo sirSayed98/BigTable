@@ -18,7 +18,7 @@ if (process.env.NODE_ENV === "development") {
 const MoviesRouter = require("./routes/MovieTabletServer1");
 
 //mount routes
-app.use("/Movies/Tablet1", MoviesRouter);
+app.use("/Movies/Tablet", MoviesRouter);
 
 // errorHandler
 app.use(errorHandler);

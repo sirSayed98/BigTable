@@ -38,7 +38,7 @@ const io = Socket(server);
 const { configuration } = require("./controllers/MovieMaster");
 
 const onConnection = (socket) => {
-  configuration(socket);
+  configuration(socket,io);
 };
 
 io.on("connection", onConnection);

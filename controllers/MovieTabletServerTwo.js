@@ -16,9 +16,22 @@ Socket.on("connect", function (so) {
   );
 });
 
-//send Status of TabletServer to Master Server
 Socket.emit("status", {
   tabletCount: process.env.TABLET_SERVER_TWO_TABLETS * 1,
+});
+
+Socket.on("recieveData", function (data) {
+  const step = data.length / 2;
+  let part1 = data.slice(0, step);
+  let part2 = data.slice(step, data.length);
+
+  setTimeout(async () => {
+    await MovieTablet3.db.collection("Movie").deleteMany();
+    await MovieTablet4.db.collection("Movie").deleteMany();
+    await MovieTablet3.db.collection("Movie").insertMany(part1);
+    await MovieTablet4.db.collection("Movie").insertMany(part2);
+  }, 5000);
+
 });
 
 exports.getMoviesTabletServer2 = asyncHandler(async (req, res, next) => {

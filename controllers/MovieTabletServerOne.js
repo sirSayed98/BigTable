@@ -7,8 +7,8 @@ dotenv.config({ path: "../config/.env" });
 
 const Socket = io.connect(process.env.MASTER_SERVER_HOST);
 
-const MovieTablet1 = connectToDB(process.env.TABLET_SERVER_ONE_ONE_CONN, 1);
-const MovieTablet2 = connectToDB(process.env.TABLET_SERVER_ONE_TWO_CONN, 2);
+let MovieTablet1 = connectToDB(process.env.TABLET_SERVER_ONE_ONE_CONN, 1);
+let MovieTablet2 = connectToDB(process.env.TABLET_SERVER_ONE_TWO_CONN, 2);
 
 Socket.on("connect", function (so) {
   console.log(
@@ -19,6 +19,19 @@ Socket.on("connect", function (so) {
 //send Status of TabletServer to Master Server
 Socket.emit("status", {
   tabletCount: process.env.TABLET_SERVER_ONE_TABLETS * 1,
+});
+Socket.on("recieveData", async function (data) {
+  const step = data.length / 2;
+  let part1 = data.slice(0, step);
+  let part2 = data.slice(step, data.length);
+
+  setTimeout(async () => {
+    await MovieTablet1.db.collection("Movie").deleteMany();
+    await MovieTablet2.db.collection("Movie").deleteMany();
+    await MovieTablet1.db.collection("Movie").insertMany(part1);
+    await MovieTablet2.db.collection("Movie").insertMany(part2);
+  }, 5000);
+  
 });
 
 exports.getMoviesMul = asyncHandler(async (req, res, next) => {
