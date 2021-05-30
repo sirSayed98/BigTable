@@ -32,18 +32,13 @@ const server = app.listen(
   console.log(`Master Server running on port ${PORT}`)
 );
 const io = Socket(server);
-let configData = {
-  tabletServerCounter: 0,
-  numOfTablets: 0,
-  tabletServers: [],
-};
 
 //_______________________________SOCKET____________________________________
 
 const { configuration } = require("./controllers/MovieMaster");
 
 const onConnection = (socket) => {
-  configuration(socket, configData);
+  configuration(socket);
 };
 
 io.on("connection", onConnection);
