@@ -21,19 +21,20 @@ exports.configuration = (socket, configData) => {
     var tabletServer = {
       clientID: configData.tabletServerCounter,
       tablets: data.tabletCount,
+      socketID: socket.id,
     };
 
     configData.tabletServers.push(tabletServer);
-    configData.tabletServers.map((el) => {
-      configData.numOfTablets += el.tablets;
-    });
+
+    configData.numOfTablets += tabletServer.tablets;
+
+    if (configData.tabletServerCounter == process.env.TABLET_SERVER_LIMIT) {
+      console.log(`[SERVER] Project is now ready to simulation.`);
+    }
 
     console.log(`[SERVER] System has ${configData.numOfTablets} tablets.`);
     console.log(
-      `[SERVER] one of tablet servers has been
-      connected # tabletServers = ${configData.tabletServerCounter}`
+      `[SERVER] one of tablet servers has been connected # tabletServers = ${configData.tabletServerCounter}`
     );
-
-   
   });
 };

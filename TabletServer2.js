@@ -3,10 +3,11 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const errorHandler = require("./middleware/error");
 
+
 // Load env vars
 dotenv.config({ path: "./config/.env" });
 
-const PORT = process.env.TABLET_SERVER_ONE_PORT || 4000;
+const PORT = process.env.TABLET_SERVER_TWO_PORT || 3000;
 const app = express();
 
 // Dev logging middleware
@@ -15,18 +16,20 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // load Routers
-const MoviesRouter = require("./routes/MovieTabletServer1");
+const MoviesRouter = require("./routes/MovieTabletServer2");
 
 //mount routes
-app.use("/Movies/Tablet1", MoviesRouter);
+app.use("/Movies/Tablet2", MoviesRouter);
 
 // errorHandler
 app.use(errorHandler);
 
 const server = app.listen(
   PORT,
-  console.log(`Tablet Server1 running on port ${PORT}`)
+  console.log(`Tablet Server2 running on port ${PORT}`)
 );
+
+
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
