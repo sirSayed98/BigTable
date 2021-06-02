@@ -45,3 +45,19 @@ exports.getMoviesTabletServer2 = asyncHandler(async (req, res, next) => {
     data: films,
   });
 });
+
+exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
+  let arr;
+  if (req.params.id * 1 == 1) {
+    arr = await MovieTablet3.db.collection("Movie").find().toArray();
+  } else {
+    arr = await MovieTablet4.db.collection("Movie").find().toArray();
+  }
+
+  res.status(200).json({
+    success: true,
+    count: arr.length,
+    data: arr,
+  });
+
+});

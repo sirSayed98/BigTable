@@ -14,6 +14,7 @@ Socket.on("connect", function (so) {
   console.log(
     "[TABLET] Tablet Server1 has been connected to the master server!"
   );
+  //TODO:reorder
 });
 
 //send Status of TabletServer to Master Server
@@ -44,4 +45,20 @@ exports.getMoviesMul = asyncHandler(async (req, res, next) => {
     count: films.length,
     data: films,
   });
+});
+
+exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
+  let arr;
+  if (req.params.id * 1 == 1) {
+    arr = await MovieTablet1.db.collection("Movie").find().toArray();
+  } else {
+    arr = await MovieTablet2.db.collection("Movie").find().toArray();
+  }
+
+  res.status(200).json({
+    success: true,
+    count: arr.length,
+    data: arr,
+  });
+
 });

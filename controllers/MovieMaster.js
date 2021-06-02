@@ -9,18 +9,25 @@ let configData = {
 };
 
 exports.getMovies = asyncHandler(async (req, res, next) => {
-  const Movies = await Movie.find().limit(20);
+  const Movies = await Movie.find().limit(30);
 
   res.status(200).json({
     success: true,
+    count: Movies.length,
     data: Movies,
   });
 });
 
 const divideData = async (configData, socket, io) => {
   const Movies = await Movie.find();
-  const step = Movies.length / configData.numOfTablets;
+  let step = Movies.length / configData.numOfTablets;
   let counter = 1;
+  step =
+    process.env.TABLET_CAPACITY * 1 >= step
+      ? step
+      : process.env.TABLET_CAPACITY * 1;
+
+  console.log(`[SERVER] step= ${step}`)    
   configData.tabletServers.map((el) => {
     let numOfrows = step * el.tablets;
     el.dataStartID = counter;
@@ -33,7 +40,6 @@ const divideData = async (configData, socket, io) => {
     var data = Movies.slice(el.dataStartID - 1, el.dataEndID);
     io.to(el.socketID).emit("recieveData", data);
   });
-
 };
 
 exports.configuration = (socket, io) => {

@@ -1,6 +1,6 @@
 
 const MovieObj = {
-  _id: {
+  id: {
     type: Number,
   },
   budget: {
