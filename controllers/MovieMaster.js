@@ -27,17 +27,21 @@ const divideData = async (configData, socket, io) => {
       ? step
       : process.env.TABLET_CAPACITY * 1;
 
-  console.log(`[SERVER] step= ${step}`)    
+  console.log(`[SERVER] step= ${step}`);
   configData.tabletServers.map((el) => {
     let numOfrows = step * el.tablets;
+    el.numOfrows = numOfrows;
     el.dataStartID = counter;
     el.dataEndID = counter + numOfrows - 1;
     counter += numOfrows;
   });
 
-  //send data to tablet servers
+  console.log(`[SERVER] Meta Table`);
+  console.log(configData);
+  // send data to tablet servers
   configData.tabletServers.map((el) => {
     var data = Movies.slice(el.dataStartID - 1, el.dataEndID);
+    io.to(el.socketID).emit("metaTable", el);
     io.to(el.socketID).emit("recieveData", data);
   });
 };
@@ -67,4 +71,23 @@ exports.configuration = (socket, io) => {
       `[SERVER] one of tablet servers has been connected # tabletServers = ${configData.tabletServerCounter}`
     );
   });
+
+  socket.on("lazyDelete", function (data) {
+    console.log(`[SERVER] Server has recieved deleted vector from Tablet`);
+    lazyDelete(data);
+  });
+};
+
+const lazyDelete = (data) => {
+  let DeletedVector = data.DeletedVector;
+  let TabletID = data.id;
+
+  console.log("_________________");
+  console.log(data);
+  console.log(TabletID);
+  console.log(DeletedVector);
+  console.log("_________________");
+
+  // console.log(DeletedVector);
+  // console.log(TabletID);
 };

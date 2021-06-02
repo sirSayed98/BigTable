@@ -1,4 +1,3 @@
-
 const MovieObj = {
   id: {
     type: Number,
@@ -46,5 +45,9 @@ const MovieObj = {
     type: Date,
     default: Date.now,
   },
+  deleted: {
+    type: Boolean,
+    default: false,
+  },
 };
-module.exports= MovieObj
+module.exports = MovieObj;

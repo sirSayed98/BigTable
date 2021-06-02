@@ -1,7 +1,8 @@
 const express = require("express");
 const {
   getMoviesMul,
-  getMoviesTabletPartion 
+  getMoviesTabletPartion,
+  deleteMovieByID 
 } = require("../controllers/MovieTabletServerOne");
 
 const router = express.Router();
@@ -9,5 +10,7 @@ const router = express.Router();
 
 router.route("/Part/:id").get(getMoviesTabletPartion);
 router.route("/").get(getMoviesMul);
+
+router.route("/:tabletID/:id").delete(deleteMovieByID);
 
 module.exports = router;
