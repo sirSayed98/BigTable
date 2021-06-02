@@ -23,20 +23,17 @@ Socket.on("connect", function (so) {
 Socket.emit("status", {
   tabletCount: process.env.TABLET_SERVER_ONE_TABLETS * 1,
 });
+Socket.on("metaTable", async function (data) {
+  metaTable = data;
+  console.log(`[TABLET] received metatable `);
+  console.log(metaTable);
+});
+
 Socket.on("recieveData", async function (data) {
   const step = data.length / 2;
   let part1 = data.slice(0, step);
   let part2 = data.slice(step, data.length);
 
-  // let tablets = [
-  //   { startID: metaTable.startID, endID: metaTable.startID + part1.length - 1 },
-  //   {
-  //     startID: metaTable.startID + part1.length,
-  //     endID: metaTable.startID + part1.length + part2.length - 1,
-  //   },
-  // ];
-  console.log("________________");
-  console.log(metaTable);
   let tablets = [{}, {}];
 
   tablets[0].startID = metaTable.dataStartID;
@@ -58,11 +55,7 @@ Socket.on("recieveData", async function (data) {
     await MovieTablet2.db.collection("Movie").insertMany(part2);
   }, 5000);
 });
-Socket.on("metaTable", async function (data) {
-  metaTable = data;
-  console.log(`[TABLET] received metatable `);
-  console.log(metaTable);
-});
+
 
 exports.getMoviesMul = asyncHandler(async (req, res, next) => {
   const arr1 = await MovieTablet1.db.collection("Movie").find().toArray();
@@ -133,3 +126,5 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
   });
 
 });
+
+
