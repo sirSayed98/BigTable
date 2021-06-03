@@ -1,6 +1,7 @@
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const Movie = require("../models/Movie");
+const { findById } = require("../models/Movie");
 
 let configData = {
   tabletServerCounter: 0,
@@ -74,45 +75,56 @@ exports.configuration = (socket, io) => {
 
   socket.on("lazyDelete", function (data) {
     console.log(`[SERVER] Server has recieved deleted vector from Tablet`);
-    lazyDelete(data, socket);
+    lazyDelete(data, socket, io);
   });
+
+  socket.on("sendDeletedVector", function (data) {
+    
+    console.log("[SERVER] Recieved Data should be deleted from other Tablet");
+
+    var tablets = data.vector;
+
+    console.log(`tablet Length should be deleted`, tablets.length);
+    if (tablets.length > 0)
+      tablets.forEach(async (el) => {
+        await Movie.findOneAndDelete({ id: el });
+        console.log(`[MASTER] has deleted row: ${el}`);
+      });
+
+  });
+
 };
 
 const lazyDelete = async (data, socket, io) => {
   let DeletedVector = data.DeletedVector;
-  let TabletID = data.id;
+  //let TabletID = data.tabletID;
   let tabletServerID = data.tabletServer;
 
   let deletedSize = DeletedVector[0].length + DeletedVector[1].length;
 
-  for (let i = 0; i < DeletedVector[0].length; i++) {
-    for (let j = 0; j < DeletedVector[1].length; j++) {
-      await Movie.findByIdAndRemove(DeletedVector[i][j]);
-      console.log(`[MASTER has deleted row: ${DeletedVector[i][j]}]`);
-    }
-  }
-  console.log("____________MASTER__________");
-  console.log(TabletID, tabletServerID, deletedSize);
+  if (DeletedVector[0].length > 0)
+    DeletedVector[0].map(async (el) => {
+      console.log(`[MASTER] row :  ${el} has been deleted`);
+      await Movie.findOneAndDelete({ id: el });
+    });
 
-  //update range for the other TabletServe
+  if (DeletedVector[1].length > 0)
+    DeletedVector[1].map(async (el) => {
+      console.log(`[MASTER] row : ${el} has been deleted`);
+      await Movie.findOneAndDelete({ id: el });
+    });
+
+
   let otherServerID = tabletServerID % 2;
   let OtherServer = configData.tabletServers[otherServerID];
   let socketID = OtherServer.socketID;
 
-  console.log("____________________MASTER_____________");
-  console.log(otherServerID, OtherServer, socketID);
+  console.log("_______newEndId_______");
+  console.log(OtherServer.dataEndID - Math.floor(deletedSize / 2));
 
   io.to(socketID).emit("reBalance", {
-    dataEndID: OtherServer.dataEndID - deletedSize / 2,
+    dataEndID: OtherServer.dataEndID - Math.floor(deletedSize / 2),
   });
-  socket.on("sendDeletedVector", function (data) {
-    console.log("[SERVER] Recieved Data should be deleted from Tablet");
-    var tablets = data.vector;
-    tablets.forEach(async (element) => {
-      await Movie.findByIdAndRemove(element);
-      console.log(`[MASTER] has deleted row: ${element}`);
-    });
 
-    //update ranges for server which send the first requesr
-  });
+  
 };

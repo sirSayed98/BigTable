@@ -59,15 +59,32 @@ Socket.on("recieveData", function (data) {
 });
 
 Socket.on("reBalance", async function (data) {
-  console.log(`[TABLET] change Data end ID`);
+  console.log(`[TABLET] Rebalance Date on Tablet server`);
   let newEnd = data.dataEndID;
   let index = newEnd + 1;
 
+  //console.log("________ newEnd / index________");
+  //console.log(newEnd, index);
+
   for (let i = index; i <= metaTable.dataEndID; i++) {
-    await MovieTablet4.db.collection("Movie").deleteOne({ id: index });
-    console.log(`[TABLET] remove row:${index} from Tablet`);
+    await MovieTablet4.db.collection("Movie").deleteOne({ id: i });
+    console.log(`[TABLET] remove row: ${i} from Tablet`);
   }
-  Socket.emit("sendDeletedVector", { vector: DeletedVector[1] });
+
+  metaTable.dataEndID = newEnd;
+  metaTable.tablets[1].endID = newEnd;
+  console.log(metaTable);
+
+  let vector = [];
+
+  vector = DeletedVector[1].filter((el) => {
+    return el > newEnd;
+  });
+  DeletedVector[1] = DeletedVector[1].filter((el) => {
+    return el <= newEnd;
+  });
+
+  Socket.emit("sendDeletedVector", { vector });
   //remove from table
   DeletedVector[1].splice(0, DeletedVector[1].length);
 });

@@ -65,11 +65,13 @@ Socket.on("reBalance", async function (data) {
     await MovieTablet4.db.collection("Movie").deleteOne({ id: index });
     console.log(`[TABLET] remove row:${index} from Tablet`);
   }
+  
   Socket.emit("sendDeletedVector", { vector: DeletedVector[1] });
 
   //remove from table
   DeletedVector[1].splice(0, DeletedVector[1].length);
 });
+
 
 
 exports.getMoviesMul = asyncHandler(async (req, res, next) => {
@@ -145,7 +147,8 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
   // if (2(Len1 + Len2) >= metaTable.numOfrows) {
   // }
 
-  if (2 * (Len1 + Len2) >= 20) {
+  if (2 * (Len1 + Len2) >= 10) {
+
     //reorder
     DeletedVector[0].sort(function (a, b) {
       return a - b;
