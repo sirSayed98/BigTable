@@ -12,6 +12,9 @@ const MovieTablet4 = connectToDB(process.env.TABLET_SERVER_TWO_TWO_CONN, 4);
 let metaTable = {};
 let DeletedVector = [[], []];
 
+let editMovies = [];
+let editIDs = [];
+
 Socket.on("connect", function (so) {
   console.log(
     "[TABLET] Tablet Server2 has been connected to the master server!"
@@ -158,4 +161,50 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     success: true,
     data: DeletedVector,
   });
+});
+
+exports.updateMovieByID = asyncHandler(async (req, res, next) => {
+  let id = req.params.id * 1;
+
+  var t1StartID = metaTable.tablets[0].startID;
+  var t1EndID = metaTable.tablets[0].endID;
+
+  var t2StartID = metaTable.tablets[1].startID;
+  var t2EndID = metaTable.tablets[1].endID;
+
+  var Tablet =
+    t1StartID <= id && id <= t1EndID
+      ? 3
+      : t2StartID <= id && id <= t2EndID
+      ? 4
+      : 0;
+  if (Tablet == 0) {
+    return res.status(404).json({
+      success: false,
+      Message: `this id:${id} is not available in this tablet server`,
+    });
+  }
+
+  const Movie =
+    Tablet == 3
+      ? await MovieTablet3.db
+          .collection("Movie")
+          .updateOne({ id: id }, { $set: req.body }, { upsert: false })
+      : await MovieTablet4.db
+          .collection("Movie")
+          .updateOne({ id: id }, { $set: req.body }, { upsert: false });
+
+  console.log(`[TABLET] update Movie id: ${id}`);
+
+  editMovies.push(req.body);
+  editIDs.push(id);
+  res.status(200).json({ success: true, data: Movie });
+
+  if (2 * editIDs.length >=  metaTable.numOfrows) {
+    console.log(`[TABLET] send edit vector to MASTER`);
+    Socket.emit("lazyUpdate", {
+      editMovies,
+      editIDs,
+    });
+  }
 });
