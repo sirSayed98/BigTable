@@ -14,6 +14,8 @@ const app = express();
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
+// Body parser
+app.use(express.json());
 
 // load Routers
 const MoviesRouter = require("./routes/MovieTabletServer2");

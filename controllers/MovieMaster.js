@@ -82,6 +82,11 @@ exports.configuration = (socket, io) => {
     lazyDelete(data, socket, io);
   });
 
+  socket.on("lazyUpdate", function (data) {
+    console.log(`[SERVER] Server has recieved edit vector`);
+    lazyUpdate(data, socket, io);
+  });
+
   socket.on("sendDeletedVector", async function (data) {
     console.log("[SERVER] Recieved Data should be deleted from other Tablet");
 
@@ -119,7 +124,6 @@ const lazyDelete = async (data, socket, io) => {
   let DeletedVector = data.DeletedVector;
   let tabletServerID = data.tabletServer;
 
-
   if (DeletedVector[0].length > 0)
     DeletedVector[0].map(async (el) => {
       console.log(`[MASTER] row :  ${el} has been deleted`);
@@ -137,4 +141,13 @@ const lazyDelete = async (data, socket, io) => {
   let socketID = OtherServer.socketID;
 
   io.to(socketID).emit("reBalance", {});
+};
+const lazyUpdate = async (data, socket, io) => {
+  var ids = data.editIDs;
+  var movies = data.editMovies;
+
+  movies.forEach(async (movie, index) => {
+    await Movie.findOneAndUpdate({ id: ids[index] }, movie);
+    console.log(`[MASTER] update movie id: ${ids[index]}`);
+  });
 };

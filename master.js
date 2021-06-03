@@ -24,6 +24,9 @@ const Movies = require("./routes/Movie");
 //mount routes
 app.use("/Movies", Movies);
 
+// Body parser
+app.use(express.json());
+
 // errorHandler
 app.use(errorHandler);
 
