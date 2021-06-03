@@ -56,6 +56,21 @@ Socket.on("recieveData", async function (data) {
   }, 5000);
 });
 
+Socket.on("reBalance", async function (data) {
+  console.log(`[TABLET] change Data end ID`);
+  let newEnd = data.dataEndID;
+  let index = newEnd + 1;
+
+  for (let i = index; i <= metaTable.dataEndID; i++) {
+    await MovieTablet4.db.collection("Movie").deleteOne({ id: index });
+    console.log(`[TABLET] remove row:${index} from Tablet`);
+  }
+  Socket.emit("sendDeletedVector", { vector: DeletedVector[1] });
+
+  //remove from table
+  DeletedVector[1].splice(0, DeletedVector[1].length);
+});
+
 
 exports.getMoviesMul = asyncHandler(async (req, res, next) => {
   const arr1 = await MovieTablet1.db.collection("Movie").find().toArray();
@@ -105,26 +120,55 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     });
   }
 
-  DeletedVector[tabletID - 1].push(id * 1);
-  console.log("_____________________");
-  console.log(DeletedVector);
+  //prevent 2 delete
+  if (DeletedVector[0].includes(id) || DeletedVector[1].includes(id)) {
+    return res.status(404).json({
+      success: false,
+      Message: `this id: ${id} already deleted`,
+    });
+  }
 
-  if (DeletedVector[tabletID - 1].length == process.env.LAZY_DELETE * 1) {
+  DeletedVector[tabletID - 1].push(id * 1);
+
+  var Len1 = DeletedVector[0].length;
+  var Len2 = DeletedVector[1].length;
+
+  const movie =
+    tabletID == 1
+      ? await MovieTablet1.db
+          .collection("Movie")
+          .update({ id: id }, { $set: { deleted: true } }, { upsert: false })
+      : await MovieTablet2.db
+          .collection("Movie")
+          .update({ id: id }, { $set: { deleted: true } }, { upsert: false });
+
+  // if (2(Len1 + Len2) >= metaTable.numOfrows) {
+  // }
+
+  if (2 * (Len1 + Len2) >= 20) {
+    //reorder
+    DeletedVector[0].sort(function (a, b) {
+      return a - b;
+    });
+    DeletedVector[1].sort(function (a, b) {
+      return a - b;
+    });
     Socket.emit("lazyDelete", {
       DeletedVector,
-      id: tabletID,
+      tabletID,
+      tabletServer: metaTable.tabletServerID,
     });
     console.log(`[TABLET] Send Deleted Vector to Master`);
-   return  res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: DeletedVector,
     });
   }
+
   res.status(200).json({
     success: true,
     data: DeletedVector,
   });
 
+
 });
-
-
