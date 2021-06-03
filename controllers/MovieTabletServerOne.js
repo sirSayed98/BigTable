@@ -3,12 +3,11 @@ const asyncHandler = require("../middleware/async");
 const io = require("socket.io-client");
 const dotenv = require("dotenv");
 const { connectToDB } = require("../config/MovieTabletServerConnect");
+dotenv.config({ path: "../config/.env" });
 
 const Socket = io.connect(process.env.MASTER_SERVER_HOST);
 let MovieTablet2 = connectToDB(process.env.TABLET_SERVER_ONE_TWO_CONN, 2);
 let MovieTablet1 = connectToDB(process.env.TABLET_SERVER_ONE_ONE_CONN, 1);
-
-dotenv.config({ path: "../config/.env" });
 
 let metaTable = {};
 let DeletedVector = [[], []];
@@ -23,6 +22,7 @@ Socket.on("connect", function (so) {
 Socket.emit("status", {
   tabletCount: process.env.TABLET_SERVER_ONE_TABLETS * 1,
 });
+
 Socket.on("metaTable", async function (data) {
   metaTable = data;
   console.log(`[TABLET] received metatable `);
@@ -45,7 +45,6 @@ Socket.on("recieveData", async function (data) {
   tablets[1].ID = 2;
 
   metaTable.tablets = tablets;
-  console.log("________end________");
   console.log(metaTable);
 
   setTimeout(async () => {
@@ -57,24 +56,15 @@ Socket.on("recieveData", async function (data) {
 });
 
 Socket.on("reBalance", async function (data) {
-  console.log(`[TABLET] change Data end ID`);
-  let newEnd = data.dataEndID;
-  let index = newEnd + 1;
+  console.log(`[TABLET] Rebalance Date`);
 
-  for (let i = index; i <= metaTable.dataEndID; i++) {
-    await MovieTablet4.db.collection("Movie").deleteOne({ id: index });
-    console.log(`[TABLET] remove row:${index} from Tablet`);
-  }
-  
-  Socket.emit("sendDeletedVector", { vector: DeletedVector[1] });
-
-  //remove from table
+  Socket.emit("sendDeletedVector", { DeletedVector });
+  //remove Deleted Vector
+  DeletedVector[0].splice(0, DeletedVector[0].length);
   DeletedVector[1].splice(0, DeletedVector[1].length);
 });
 
-
-
-exports.getMoviesMul = asyncHandler(async (req, res, next) => {
+exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
   const arr1 = await MovieTablet1.db.collection("Movie").find().toArray();
   const arr2 = await MovieTablet2.db.collection("Movie").find().toArray();
 
@@ -144,10 +134,8 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
           .collection("Movie")
           .update({ id: id }, { $set: { deleted: true } }, { upsert: false });
 
-  // if (2(Len1 + Len2) >= metaTable.numOfrows) {
-  // }
 
-  if (2 * (Len1 + Len2) >= 10) {
+  if (2*(Len1 + Len2) >= metaTable.numOfrows) {
 
     //reorder
     DeletedVector[0].sort(function (a, b) {
