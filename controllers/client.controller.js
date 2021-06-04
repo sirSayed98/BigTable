@@ -79,13 +79,13 @@ function handleSetRequest(){ //gets data from user when the user chooses set opt
         try{
             requestJson = JSON.parse(answer.requestData);           
         }catch {
-            console.log("[Client] error in input format");
+            return Promise.reject(new Error("[Client] error in input format"));
         }
         let tabletNumber = getTabletNumber(requestJson.id) // get tablet todo check if id exists in string
         if(tabletNumber==-1){
-            console.log("this key doesn't exist in the database");
-            askIfFinished();
-            return Promise.resolve();
+            
+            errorMessage = `this key : ${requestJson.id} doesn't exist in the database`;
+            return Promise.reject(new Error(errorMessage));
         }
         return axios.put(tabletConnectionList[tabletNumber],requestJson,axiosConfig)})
     .then(function (response) {
@@ -111,7 +111,7 @@ function handleAddRowRequest(){ //gets data from user when the user chooses addr
         try{
             requestJson = JSON.parse(answer.requestData);           
         }catch {
-            console.log("[Client] error in input format");
+            return Promise.reject(new Error("[Client] error in input format"));
         }
         let tabletNumber = 1 ; //todo what should we do in case of add new row ??
         return axios.post(tabletConnectionList[tabletNumber],requestJson,axiosConfig)}) // send data
@@ -144,13 +144,12 @@ function handleDeleteCellsRequest(){ //gets data from user when the user chooses
         try{
             dataInputJson = JSON.parse(answer.requestData);
         }catch {
-            console.log("[Client] error in input format");
+            return Promise.reject(new Error("[Client] error in input format"));
         }
         let tabletNumber = getTabletNumber(dataInputJson.id) // get tablet todo check if id exists in string
         if(tabletNumber==-1){
-            console.log("this key doesn't exist in the database");
-            askIfFinished();
-            return Promise.resolve();
+            errorMessage = `this key : ${requestJson.id} doesn't exist in the database`;
+            return Promise.reject(new Error(errorMessage));
         }
         let columnsString = dataInputJson.columns
         let columnsList = columnsString.replace("[","").replace("]","").replace(/ /g,'').split(",");
@@ -181,6 +180,7 @@ function handleDeleteCellsRequest(){ //gets data from user when the user chooses
 
 
 function handleDeleteRowRequest(){ //gets data from user when the user chooses DeleteRow option -> sends the data -> goes to askIfFinished function
+    let sentIdsList = []
     inquirer.prompt([{
         type:"input",
         name:"requestData",
@@ -190,31 +190,42 @@ function handleDeleteRowRequest(){ //gets data from user when the user chooses D
         try{
             dataInputJson = JSON.parse(answer.requestData);
         }catch {
-            console.log("[Client] error in input format");
+            return Promise.reject(new Error("[Client] error in input format"));
         }
         
         let idsString = dataInputJson.ids;
         let idsList = idsString.replace("[","").replace("]","").replace(/ /g,'').split(",");
         let idsListSplitIntoTablets= splitIdsAmongTablets(idsList);
         let promiseList = []
+        
         console.log(idsListSplitIntoTablets);
+
+        if (-1 in idsListSplitIntoTablets){
+            errorMessage = `ids  : ${idsListSplitIntoTablets[-1]} are not inside the database`;
+            return Promise.reject(new Error(errorMessage));
+        }
         for (var tablet in idsListSplitIntoTablets){
-            if(tablet == -1){
-                console.log(`ids ${idsListSplitIntoTablets[tablet]} are not inside the database`)
-                askIfFinished();
-                return Promise.resolve();
-            }
             var requestJson = {
                 ids : idsListSplitIntoTablets[tablet]
             };
+            sentIdsList.push(requestJson);
             promiseList.push(axios.delete(tabletConnectionList[tablet],{data:requestJson}));
         }
         
-        return Promise.all(promiseList);
+        return Promise.allSettled(promiseList);
     })
-    .then(function (response) {
-            console.log(`[client] rows = ${requestJson.ids} successfully deleted`);
+    .then(function (results) {
+        let counter = 0;
+        results.forEach((result) => {
+            if(result.status == "rejected"){
+                console.log(`failed to delete ${sentIdsList[counter].ids}`);
+            }
+            else{
+                console.log(`successfully deleted ${sentIdsList[counter].ids}`);
+            }
+            counter+=1
         })
+    })
     .catch(function (error) {
             console.log(error);
         })
@@ -222,6 +233,66 @@ function handleDeleteRowRequest(){ //gets data from user when the user chooses D
             askIfFinished();
         });  
 }
+
+
+
+function handleReadRowRequest(){ //gets data from user when the user chooses ReadRow option -> sends the data -> goes to askIfFinished function
+    let sentIdsList = []
+    inquirer.prompt([{
+        type:"input",
+        name:"requestData",
+        message:"please add data in the following format \n"+
+        " {\"ids\" : \"[<rowKey>,<rowKey>,<rowKey>,.......]\" }\n "}]) 
+    .then(answer =>{
+        try{
+            dataInputJson = JSON.parse(answer.requestData);
+        }catch {
+            return Promise.reject(new Error("[Client] error in input format"));
+        }
+        
+        let idsString = dataInputJson.ids;
+        let idsList = idsString.replace("[","").replace("]","").replace(/ /g,'').split(",");
+        let idsListSplitIntoTablets= splitIdsAmongTablets(idsList);
+        let promiseList = []
+        
+        console.log(idsListSplitIntoTablets);
+
+        if (-1 in idsListSplitIntoTablets){
+            errorMessage = `ids  : ${idsListSplitIntoTablets[-1]} are not inside the database`;
+            return Promise.reject(new Error(errorMessage));
+        }
+        for (var tablet in idsListSplitIntoTablets){
+            var requestJson = {
+                ids : idsListSplitIntoTablets[tablet]
+            };
+            sentIdsList.push(requestJson);
+            promiseList.push(axios.get(tabletConnectionList[tablet],requestJson));
+        }
+        
+        return Promise.allSettled(promiseList);
+    })
+    .then(function (results) {
+        let counter = 0;
+        results.forEach((result) => {
+            if(result.status == "rejected"){
+                console.log(`failed to fetch ${sentIdsList[counter].ids}`);
+            }
+            else{
+                console.log(`successfully fetched ${sentIdsList[counter].ids}`+"\n"+result.data);
+                
+            }
+            counter+=1
+        })
+    })
+    .catch(function (error) {
+            console.log(error);
+        })
+    .then(function () {
+            askIfFinished();
+        });  
+
+}
+
 
 
 
@@ -283,7 +354,7 @@ function readInputs(){
                 handleAddRowRequest();
             break;
             case "ReadRows":
-                //todo send a request
+                handleReadRowRequest();
             break;
         }
     })
