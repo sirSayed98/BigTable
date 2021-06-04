@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/sirSayed98/BigTable#readme",
   "dependencies": {
+    "async-mutex": "^0.3.1",
     "colors": "^1.4.0",
     "config": "^3.3.6",
     "dotenv": "^9.0.2",
@@ -36,6 +37,7 @@
     "nodemailer": "^6.6.0",
     "nodemon": "^2.0.7",
     "socket.io": "^4.1.2",
-    "socket.io-client": "^4.1.2"
+    "socket.io-client": "^4.1.2",
+    "system-sleep": "^1.3.7"
   }
 }
