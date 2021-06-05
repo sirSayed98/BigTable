@@ -29,7 +29,7 @@ Socket.emit("status", {
 Socket.on("metaTable", async function (data) {
   metaTable = data;
   console.log(`[TABLET] received metatable `);
-  console.log(metaTable);
+  //console.log(metaTable);
 });
 
 Socket.on("recieveData", async function (data) {
@@ -48,7 +48,7 @@ Socket.on("recieveData", async function (data) {
   tablets[1].ID = 2;
 
   metaTable.tablets = tablets;
-  console.log(metaTable);
+  //console.log(metaTable);
 
   setTimeout(async () => {
     await MovieTablet1.db.collection("Movie").deleteMany();
@@ -63,8 +63,17 @@ Socket.on("reBalance", async function (data) {
 
   Socket.emit("sendDeletedVector", { DeletedVector });
   //remove Deleted Vector
-  DeletedVector[0].splice(0, DeletedVector[0].length);
-  DeletedVector[1].splice(0, DeletedVector[1].length);
+  DeletedVector[0] = [];
+  DeletedVector[1] = [];
+});
+Socket.on("reEdit", async function (params) {
+  console.log(`[TABLET] Send EDIT vector`);
+  Socket.emit("lazyUpdate", {
+    editMovies,
+    editIDs,
+  });
+  editMovies = [];
+  editIDs = [];
 });
 
 exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
@@ -137,6 +146,14 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
           .collection("Movie")
           .update({ id: id }, { $set: { deleted: true } }, { upsert: false });
 
+  let startIndex = editIDs.indexOf(id);
+
+  if (startIndex !== -1) {
+    editMovies.splice(startIndex, 1);
+    editIDs.splice(startIndex, 1);
+    console.log(`[TABLET] Remove ID: ${id} from edit lazy list`);
+  }
+
   if (2 * (Len1 + Len2) >= metaTable.numOfrows) {
     //reorder
     DeletedVector[0].sort(function (a, b) {
@@ -145,11 +162,23 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     DeletedVector[1].sort(function (a, b) {
       return a - b;
     });
+    Socket.emit("lazyUpdate", {
+      editMovies,
+      editIDs,
+    });
+
+    editMovies = [];
+    editIDs = [];
+
     Socket.emit("lazyDelete", {
       DeletedVector,
       tabletID,
       tabletServer: metaTable.tabletServerID,
     });
+
+    DeletedVector[0] = [];
+    DeletedVector[1] = [];
+
     console.log(`[TABLET] Send Deleted Vector to Master`);
     return res.status(200).json({
       success: true,
@@ -162,6 +191,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     data: DeletedVector,
   });
 });
+
 exports.updateMovieByID = asyncHandler(async (req, res, next) => {
   let id = req.params.id * 1;
 
@@ -189,7 +219,7 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
       ? await MovieTablet1.db
           .collection("Movie")
           .updateOne({ id: id }, { $set: req.body }, { upsert: false })
-      : await MovieTablet1.db
+      : await MovieTablet2.db
           .collection("Movie")
           .updateOne({ id: id }, { $set: req.body }, { upsert: false });
 
@@ -205,5 +235,7 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
       editMovies,
       editIDs,
     });
+    editMovies = [];
+    editIDs = [];
   }
 });

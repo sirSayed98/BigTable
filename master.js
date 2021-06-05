@@ -50,7 +50,7 @@ io.on("disconnect", function (socket) {
   tabletServerCounter--;
 
   console.log(
-    `[SERVER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
+    `[MASTER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
   );
 });
 //________________________________________________________________
