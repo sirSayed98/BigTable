@@ -12,10 +12,10 @@ const axiosConfig = {
   };
 
 tabletConnectionList = {
-    1:"http://localhost:"+process.env.TABLET_SERVER_ONE_PORT+"/movie/tablet1",
-    2:"http://localhost:"+process.env.TABLET_SERVER_ONE_PORT+"/movie/tablet2",
-    3:"http://localhost:"+process.env.TABLET_SERVER_TWO_PORT+"/movie/tablet3",
-    4:"http://localhost:"+process.env.TABLET_SERVER_TWO_PORT+"/movie/tablet4"
+    1:"http://localhost:"+process.env.TABLET_SERVER_ONE_PORT+"/movie/client/tablet1",
+    2:"http://localhost:"+process.env.TABLET_SERVER_ONE_PORT+"/movie/client/tablet2",
+    3:"http://localhost:"+process.env.TABLET_SERVER_TWO_PORT+"/movie/client/tablet3",
+    4:"http://localhost:"+process.env.TABLET_SERVER_TWO_PORT+"/movie/client/tablet4"
 }
 
 requestsList = [
