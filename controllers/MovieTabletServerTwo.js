@@ -3,6 +3,7 @@ const asyncHandler = require("../middleware/async");
 const io = require("socket.io-client");
 const dotenv = require("dotenv");
 const { connectToDB } = require("../config/MovieTabletServerConnect");
+const getTime = require("../utils/getTime");
 dotenv.config({ path: "../config/.env" });
 
 const Socket = io.connect(process.env.MASTER_SERVER_HOST);
@@ -14,6 +15,9 @@ let DeletedVector = [[], []];
 
 let editMovies = [];
 let editIDs = [];
+
+let createdVector1 = [];
+let createdVector2 = [];
 
 Socket.on("connect", function (so) {
   console.log(
@@ -42,12 +46,16 @@ Socket.on("recieveData", function (data) {
   tablets[0].startID = metaTable.dataStartID;
   tablets[0].endID = tablets[0].startID + part1.length - 1;
   tablets[0].ID = 3;
+  tablets[0].numOfRows = part1.length;
 
   tablets[1].startID = tablets[0].endID + 1;
   tablets[1].endID = tablets[1].startID + part2.length - 1;
   tablets[1].ID = 4;
+  tablets[1].numOfRows = part2.length;
 
+  metaTable.endID = tablets[1].endID;
   metaTable.tablets = tablets;
+  metaTable.tabletCapacity = process.env.TABLET_CAPACITY * 1;
   //console.log(metaTable);
 
   setTimeout(async () => {
@@ -67,12 +75,20 @@ Socket.on("reBalance", async function (data) {
     editIDs,
   });
 
+  console.log(`[TABLET] Send created Vector to Master`);
+  Socket.emit("lazyCreate", {
+    createdVector1,
+    createdVector2,
+  });
+
   console.log(`[TABLET] Send Deleted vector`);
   Socket.emit("deleteAndRebalance", { DeletedVector });
 
   //remove from table
   DeletedVector[0] = [];
   DeletedVector[1] = [];
+  createdVector1 = [];
+  createdVector2 = [];
   editMovies = [];
   editIDs = [];
 });
@@ -175,6 +191,15 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     editMovies = [];
     editIDs = [];
 
+    console.log(`[TABLET] Send created Vector to Master`);
+    Socket.emit("lazyCreate", {
+      createdVector1,
+      createdVector2,
+    });
+
+    createdVector1 = [];
+    createdVector2 = [];
+
     console.log(`[TABLET] Send Deleted Vector to Master`);
     Socket.emit("lazyDelete", {
       DeletedVector,
@@ -185,7 +210,6 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     DeletedVector[0] = [];
     DeletedVector[1] = [];
 
-    console.log(`[TABLET] Send Deleted Vector to Master`);
     return res.status(200).json({
       success: true,
       data: DeletedVector,
@@ -243,4 +267,72 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
     editMovies = [];
     editIDs = [];
   }
+});
+
+exports.createMovie = asyncHandler(async (req, res, next) => {
+  if (
+    metaTable.tablets[0].length == metaTable.tabletCapacity &&
+    metaTable.tablets[1].length == metaTable.tabletCapacity
+  ) {
+    console.log(`[MASTER] tablet server capacity is full `);
+    return res
+      .status(500)
+      .json({ message: "Tablet server reached its capacity" });
+  }
+
+  let tablet = createdVector1.length <= createdVector2.length ? 3 : 4;
+
+  console.log(`[TABLET] recieved post req from in tablet ${tablet}`);
+
+  metaTable.endID += 1;
+
+  req.body.id = metaTable.endID;
+  req.body.createdAt = getTime();
+  req.body.deleted = false;
+
+  const Movie =
+    tablet == 3
+      ? await MovieTablet3.db.collection("Movie").insertOne(req.body)
+      : await MovieTablet4.db.collection("Movie").insertOne(req.body);
+
+  if (tablet == 1) {
+    createdVector1.push(req.body);
+  } else createdVector2.push(req.body);
+
+  console.log(createdVector1);
+  console.log(createdVector2);
+
+  if (
+    2 * (createdVector1.length + createdVector2.length) >=
+    metaTable.numOfrows
+  ) {
+    //call reblance
+    console.log(`[MASTER] exceed half capacity`);
+
+    Socket.emit("lazyUpdate", {
+      editMovies,
+      editIDs,
+    });
+
+    editMovies = [];
+    editIDs = [];
+
+    Socket.emit("lazyCreate", {
+      createdVector1,
+      createdVector2,
+    });
+
+    createdVector1 = [];
+    createdVector2 = [];
+
+    Socket.emit("lazyDelete", {
+      DeletedVector,
+      tabletServer: metaTable.tabletServerID,
+    });
+
+    DeletedVector[0] = [];
+    DeletedVector[1] = [];
+  }
+
+  res.status(200).send({ data: createdVector1.concat(createdVector2) });
 });
