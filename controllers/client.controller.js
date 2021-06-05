@@ -27,13 +27,7 @@ requestsList = [
 ]
 
 
-let metadata = {tabletServers:[
-    {dataStartID:1,dataEndID:5},
-    {dataStartID:6,dataEndID:10},
-    {dataStartID:11,dataEndID:15},
-    {dataStartID:16,dataEndID:20},
-]
-};
+let metadata = null;
 
 let Socket = null;
 
@@ -70,17 +64,25 @@ function getTabletNumber(id){
     return tabletNumber;
 }
 function handleSetRequest(){ //gets data from user when the user chooses set option -> sends the data -> goes to askIfFinished function
+    let rowId ; 
     inquirer.prompt([{
         type:"input",
         name:"requestData",
         message:"please add data in the following format \n"+
-        " {\"id\" : \"<rowKey>\" , \"<columnName>\": \"<value>\" , \"<columnName>\":\"<value>\" ,..... }\n",}])
+        " <rowKey>  , <columnName>: <value> , <columnName>:<value> ,..... \n",}])
     .then(answer =>{
-        try{
-            requestJson = JSON.parse(answer.requestData);           
-        }catch {
-            return Promise.reject(new Error("[Client] error in input format"));
+        rowId = answer.requestData.replace(/ /g,"").split(",")[0];
+        let rowValueStringList = answer.requestData.replace(/ /g,"").split(",").slice(1);
+        let requestJson = {
+            id : rowId
         }
+        rowValueStringList.forEach(value =>{
+            let col = value.split(":")[0];
+            let val = value.split(":")[1];
+            requestJson[col] = val;
+        }) ;      
+
+
         let tabletNumber = getTabletNumber(requestJson.id) // get tablet todo check if id exists in string
         if(tabletNumber==-1){
             
@@ -105,22 +107,25 @@ function handleAddRowRequest(){ //gets data from user when the user chooses addr
         type:"input",
         name:"requestData",
         message:"please add data in the following format \n"+
-        " { \"<columnName>\": \"<value>\" , \"<columnName>\":\"<value>\" ,..... }\n",}])
+        " <columnName> : <value> , <columnName> : <value> ,..... \n",}])
     
     .then(answer =>{
-        try{
-            requestJson = JSON.parse(answer.requestData);           
-        }catch {
-            return Promise.reject(new Error("[Client] error in input format"));
-        }
         let tabletNumber = 1 ; //todo what should we do in case of add new row ??
+        let rowValueStringList = answer.requestData.replace(/ /g,"").split(",");
+        let requestJson = {}
+        rowValueStringList.forEach(value =>{
+            let col = value.split(":")[0];
+            let val = value.split(":")[1];
+            requestJson[col] = val;
+        }) ;      
+
         return axios.post(tabletConnectionList[tabletNumber],requestJson,axiosConfig)}) // send data
         
     .then(function (response) {
             console.log(`[client] new row added successfully`);
           })
     .catch(function (error) {
-            console.log(error);
+            console.log(`[client] failed to add new row`);
           })
     .then(function () {
             askIfFinished();
@@ -135,42 +140,40 @@ function convertListToObjectWithNull(list){
 }
 
 function handleDeleteCellsRequest(){ //gets data from user when the user chooses DeleteCells option -> sends the data -> goes to askIfFinished function
+    let rowId;
     inquirer.prompt([{
         type:"input",
         name:"requestData",
         message:"please add data in the following format \n"+
-        " {\"id\" : \"<rowKey>\" , \"columns\": \"[<columnName>,<columnName>,<columnName>,.....]\" }\n "}])
+        "<rowKey>  <columnName> <columnName> <columnName> ..... \n"}])
     .then(answer =>{
-        try{
-            dataInputJson = JSON.parse(answer.requestData);
-        }catch {
-            return Promise.reject(new Error("[Client] error in input format"));
-        }
-        let tabletNumber = getTabletNumber(dataInputJson.id) // get tablet todo check if id exists in string
+        let inputData = answer.requestData;
+        rowId = inputData.trim().split(/\s+/)[0];
+        let tabletNumber = getTabletNumber(rowId);
         if(tabletNumber==-1){
             errorMessage = `this key : ${requestJson.id} doesn't exist in the database`;
             return Promise.reject(new Error(errorMessage));
         }
-        let columnsString = dataInputJson.columns
-        let columnsList = columnsString.replace("[","").replace("]","").replace(/ /g,'').split(",");
-        console.log(columnsList);
+        
+        let columnsList = inputData.trim().split(/\s+/).slice(1)
+        
         let columnsListWithNullValues = convertListToObjectWithNull(columnsList);
-        console.log(columnsListWithNullValues);
+        
         let requestJson = {
-            id : dataInputJson.id
+            id : rowId
         }
         requestJson = {
             ...requestJson,
             ...columnsListWithNullValues
             }
-        
+        //console.log(requestJson);
         return axios.put(tabletConnectionList[tabletNumber],requestJson,axiosConfig)
     })
     .then(function (response) {
             console.log(`[client] cells deleted successfully `);
         })
     .catch(function (error) {
-            console.log(error);
+            console.log(`failed to delete cells from row : ${rowId}`);
         })
     .then(function () {
             askIfFinished();
@@ -185,20 +188,13 @@ function handleDeleteRowRequest(){ //gets data from user when the user chooses D
         type:"input",
         name:"requestData",
         message:"please add data in the following format \n"+
-        " {\"ids\" : \"[<rowKey>,<rowKey>,<rowKey>,.......]\" }\n "}]) 
+        " <row_id>  <row_id>  <row_id>  <row_id>\n "}]) 
     .then(answer =>{
-        try{
-            dataInputJson = JSON.parse(answer.requestData);
-        }catch {
-            return Promise.reject(new Error("[Client] error in input format"));
-        }
-        
-        let idsString = dataInputJson.ids;
-        let idsList = idsString.replace("[","").replace("]","").replace(/ /g,'').split(",");
+        let idsList = answer.requestData.trim().split(/\s+/);
         let idsListSplitIntoTablets= splitIdsAmongTablets(idsList);
         let promiseList = []
         
-        console.log(idsListSplitIntoTablets);
+        //console.log(idsListSplitIntoTablets);
 
         if (-1 in idsListSplitIntoTablets){
             errorMessage = `ids  : ${idsListSplitIntoTablets[-1]} are not inside the database`;
@@ -206,8 +202,9 @@ function handleDeleteRowRequest(){ //gets data from user when the user chooses D
         }
         for (var tablet in idsListSplitIntoTablets){
             var requestJson = {
-                ids : idsListSplitIntoTablets[tablet]
+                ids : idsListSplitIntoTablets[tablet] //todo check for exact name
             };
+            //console.log(requestJson);
             sentIdsList.push(requestJson);
             promiseList.push(axios.delete(tabletConnectionList[tablet],{data:requestJson}));
         }
@@ -242,20 +239,14 @@ function handleReadRowRequest(){ //gets data from user when the user chooses Rea
         type:"input",
         name:"requestData",
         message:"please add data in the following format \n"+
-        " {\"ids\" : \"[<rowKey>,<rowKey>,<rowKey>,.......]\" }\n "}]) 
+        " <row_id> <row_id> <row_id> <row_id>\n "}]) 
     .then(answer =>{
-        try{
-            dataInputJson = JSON.parse(answer.requestData);
-        }catch {
-            return Promise.reject(new Error("[Client] error in input format"));
-        }
         
-        let idsString = dataInputJson.ids;
-        let idsList = idsString.replace("[","").replace("]","").replace(/ /g,'').split(",");
+        let idsList = answer.requestData.trim().split(/\s+/);
         let idsListSplitIntoTablets= splitIdsAmongTablets(idsList);
         let promiseList = []
         
-        console.log(idsListSplitIntoTablets);
+        //console.log(idsListSplitIntoTablets);
 
         if (-1 in idsListSplitIntoTablets){
             errorMessage = `ids  : ${idsListSplitIntoTablets[-1]} are not inside the database`;
@@ -361,5 +352,4 @@ function readInputs(){
 }
 
 
-
-readInputs();
+//readInputs();
