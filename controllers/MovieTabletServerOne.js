@@ -59,19 +59,20 @@ Socket.on("recieveData", async function (data) {
 });
 
 Socket.on("reBalance", async function (data) {
-  console.log(`[TABLET] Rebalance Date`);
+  console.log(`[TABLET] Recieved re-balance request`);
 
-  Socket.emit("sendDeletedVector", { DeletedVector });
-  //remove Deleted Vector
-  DeletedVector[0] = [];
-  DeletedVector[1] = [];
-});
-Socket.on("reEdit", async function (params) {
-  console.log(`[TABLET] Send EDIT vector`);
+  console.log(`[TABLET] Send Editied vector`);
   Socket.emit("lazyUpdate", {
     editMovies,
     editIDs,
   });
+
+  console.log(`[TABLET] Send Deleted vector`);
+  Socket.emit("deleteAndRebalance", { DeletedVector });
+
+  //remove from table
+  DeletedVector[0] = [];
+  DeletedVector[1] = [];
   editMovies = [];
   editIDs = [];
 });
@@ -162,6 +163,10 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     DeletedVector[1].sort(function (a, b) {
       return a - b;
     });
+
+    console.log(
+      `[TABLET] Send Updated vector to Master before delete and re-balance`
+    );
     Socket.emit("lazyUpdate", {
       editMovies,
       editIDs,
@@ -170,6 +175,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     editMovies = [];
     editIDs = [];
 
+    console.log(`[TABLET] Send Deleted Vector to Master`);
     Socket.emit("lazyDelete", {
       DeletedVector,
       tabletID,

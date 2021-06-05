@@ -77,36 +77,30 @@ exports.configuration = (socket, io) => {
     );
   });
 
-  socket.on("lazyDelete", function (data) {
-    console.log(`[MASTER] Server has recieved deleted vector from Tablet`);
-    lazyDelete(data, socket, io);
-  });
-
   socket.on("lazyUpdate", function (data) {
     console.log(`[MASTER] Server has recieved edit vector`);
     lazyUpdate(data, socket, io);
   });
 
-  socket.on("sendDeletedVector", async function (data) {
-    console.log("[MASTER] Recieved Data should be deleted from other Tablet");
+  socket.on("lazyDelete", function (data) {
+    console.log(`[MASTER] Server has recieved deleted vector from Tablet`);
+    lazyDelete(data, socket, io);
+  });
 
+  socket.on("deleteAndRebalance", async function (data) {
     var DeletedVector = data.DeletedVector;
 
-    if (DeletedVector[0].length > 0)
-      DeletedVector[0].map(async (el) => {
+    console.log("[MASTER] Recieved Data should be deleted from other Tablet");
+    console.log(DeletedVector);
+
+    DeletedVector.map((vector) => {
+      vector.map(async (el) => {
         console.log(`[MASTER] row :  ${el} has been deleted`);
         await Movie.findOneAndDelete({ id: el });
       });
+    });
 
-    if (DeletedVector[1].length > 0)
-      DeletedVector[1].map(async (el) => {
-        console.log(`[MASTER] row : ${el} has been deleted`);
-        await Movie.findOneAndDelete({ id: el });
-      });
-
-    console.log("[MASTER] Recieve Deleted vector from other server");
-    console.log(DeletedVector);
-
+    console.log("__________________Re-balance Stage__________");
     const movies = await Movie.find();
 
     var IDs = Array.from({ length: movies.length }, (_, i) => i + 1);
@@ -114,36 +108,36 @@ exports.configuration = (socket, io) => {
     movies.forEach((movie, index) => {
       movie.id = IDs[index];
     });
+
     await Movie.deleteMany();
     await Movie.insertMany(movies);
+
+    console.log(`[MASTER] finish updating master`);
+
     divideData(configData, socket, io);
   });
+
+  
 };
 
 const lazyDelete = async (data, socket, io) => {
   let DeletedVector = data.DeletedVector;
   let tabletServerID = data.tabletServer;
 
-  console.log(`[Master] recieve deleted vector from server:${tabletServerID}`);
-  if (DeletedVector[0].length > 0)
-    DeletedVector[0].map(async (el) => {
+  console.log(`[Master] recieve deleted vector from server: ${tabletServerID}`);
+
+  DeletedVector.map((vector) => {
+    vector.map(async (el) => {
       console.log(`[MASTER] row :  ${el} has been deleted`);
       await Movie.findOneAndDelete({ id: el });
     });
-
-  if (DeletedVector[1].length > 0)
-    DeletedVector[1].map(async (el) => {
-      console.log(`[MASTER] row : ${el} has been deleted`);
-      await Movie.findOneAndDelete({ id: el });
-    });
+  });
 
   let otherServerID = tabletServerID % 2;
-  let OtherServer = configData.tabletServers[otherServerID];
-  let socketID = OtherServer.socketID;
-
-  console.log(`[MASTER] Request edit vector from  server ${otherServerID}`);
-  io.to(socketID).emit("reEdit", {});
-  console.log("[MASTER] Ready to re balance");
+  let socketID = configData.tabletServers[otherServerID].socketID;
+  console.log(
+    `[MASTER] Send re-balance request to the server: ${otherServerID}`
+  );
   io.to(socketID).emit("reBalance", {});
 };
 const lazyUpdate = async (data, socket, io) => {
