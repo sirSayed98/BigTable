@@ -27,13 +27,7 @@ requestsList = [
 ]
 
 
-let metadata = {tabletServers:[
-    {dataStartID:1,dataEndID:5},
-    {dataStartID:6,dataEndID:10},
-    {dataStartID:11,dataEndID:15},
-    {dataStartID:16,dataEndID:20},
-]
-};
+let metadata = null;
 
 let Socket = null;
 
@@ -362,4 +356,4 @@ function readInputs(){
 
 
 
-readInputs();
+//readInputs();
