@@ -104,6 +104,7 @@ exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
     count: films.length,
     data: films,
   });
+  next();
 });
 
 exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
@@ -119,6 +120,7 @@ exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
     count: arr.length,
     data: arr,
   });
+  next();
 });
 
 exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
@@ -219,6 +221,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     success: true,
     data: DeletedVector,
   });
+  next();
 });
 
 exports.updateMovieByID = asyncHandler(async (req, res, next) => {
@@ -267,6 +270,7 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
     editMovies = [];
     editIDs = [];
   }
+  next();
 });
 
 exports.createMovie = asyncHandler(async (req, res, next) => {
@@ -335,4 +339,5 @@ exports.createMovie = asyncHandler(async (req, res, next) => {
   }
 
   res.status(200).send({ data: createdVector1.concat(createdVector2) });
+  next();
 });

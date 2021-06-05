@@ -9,11 +9,13 @@ const {
 
 const router = express.Router();
 
-router.route("/Part/:id").get(getMoviesTabletPartion);
-router.route("/").get(getMoviesTabletServer);
-router.route("/").post(createMovie);
+const { MutexLock, MutexUnLock } = require("../middleware/mutex");
 
-router.route("/:tabletID/:id").delete(deleteMovieByID);
-router.route("/:id").put(updateMovieByID);
+router.route("/Part/:id").get(MutexLock, getMoviesTabletPartion, MutexUnLock);
+router.route("/").get(MutexLock, getMoviesTabletServer, MutexUnLock);
+router.route("/").post(MutexLock, createMovie, MutexUnLock);
+
+router.route("/:tabletID/:id").delete(MutexLock, deleteMovieByID, MutexUnLock);
+router.route("/:id").put(MutexLock, updateMovieByID, MutexUnLock);
 
 module.exports = router;
