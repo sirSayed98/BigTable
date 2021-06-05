@@ -82,6 +82,11 @@ exports.configuration = (socket, io) => {
     lazyUpdate(data, socket, io);
   });
 
+  socket.on("lazyCreate", function (data) {
+    console.log(`[MASTER] Server has recieved created vector from tablet`);
+    lazyCreate(data, socket, io);
+  });
+
   socket.on("lazyDelete", function (data) {
     console.log(`[MASTER] Server has recieved deleted vector from Tablet`);
     lazyDelete(data, socket, io);
@@ -101,7 +106,7 @@ exports.configuration = (socket, io) => {
     });
 
     console.log("__________________Re-balance Stage__________");
-    const movies = await Movie.find();
+    const movies = await Movie.find().sort({ createdAt: 1 });
 
     var IDs = Array.from({ length: movies.length }, (_, i) => i + 1);
 
@@ -116,8 +121,6 @@ exports.configuration = (socket, io) => {
 
     divideData(configData, socket, io);
   });
-
-  
 };
 
 const lazyDelete = async (data, socket, io) => {
@@ -148,4 +151,11 @@ const lazyUpdate = async (data, socket, io) => {
     await Movie.findOneAndUpdate({ id: ids[index] }, movie);
     console.log(`[MASTER] update movie id: ${ids[index]}`);
   });
+};
+const lazyCreate = async (data, socket, io) => {
+  let tablets1 = data.createdVector1;
+  let tablets2 = data.createdVector2;
+
+  let tablets = tablets1.concat(tablets2);
+  await Movie.insertMany(tablets);
 };

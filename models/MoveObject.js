@@ -1,3 +1,5 @@
+const getTime = require("../utils/getTime");
+
 const MovieObj = {
   id: {
     type: Number,
@@ -42,8 +44,8 @@ const MovieObj = {
     type: String,
   },
   createdAt: {
-    type: Date,
-    default: Date.now,
+    type: String,
+    default: getTime(),
   },
   deleted: {
     type: Boolean,

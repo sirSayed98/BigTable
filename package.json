@@ -32,6 +32,7 @@
     "config": "^3.3.6",
     "dotenv": "^9.0.2",
     "express": "^4.17.1",
+    "moment": "^2.29.1",
     "mongoose": "^5.12.10",
     "morgan": "^1.10.0",
     "nodemailer": "^6.6.0",
