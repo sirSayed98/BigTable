@@ -24,6 +24,9 @@ const Movies = require("./routes/Movie");
 //mount routes
 app.use("/Movies", Movies);
 
+// Body parser
+app.use(express.json());
+
 // errorHandler
 app.use(errorHandler);
 
@@ -47,7 +50,7 @@ io.on("disconnect", function (socket) {
   tabletServerCounter--;
 
   console.log(
-    `[SERVER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
+    `[MASTER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
   );
 });
 //________________________________________________________________

@@ -27,7 +27,7 @@ const divideData = async (configData, socket, io) => {
   let counter = 1;
   step = Math.min(cap, step);
 
-  console.log(`[SERVER] step= ${step}`);
+  console.log(`[MASTER] step= ${step}`);
   let numOfrows = 0;
   configData.tabletServers.map((el, index) => {
     numOfrows =
@@ -41,8 +41,8 @@ const divideData = async (configData, socket, io) => {
     counter += numOfrows;
   });
 
-  console.log(`[SERVER] Meta Table`);
-  console.log(configData);
+  console.log(`[MASTER] Meta Table`);
+  //console.log(configData);
   // send data to tablet servers
   configData.tabletServers.map((el) => {
     var data = Movies.slice(el.dataStartID - 1, el.dataEndID);
@@ -53,7 +53,7 @@ const divideData = async (configData, socket, io) => {
 
 exports.configuration = (socket, io) => {
   configData.tabletServerCounter = io.engine.clientsCount;
-  console.log("[SERVER] Master has been instailized socket");
+  console.log("[MASTER] Master has been instailized socket");
 
   socket.on("status", function (data) {
     var tabletServer = {
@@ -67,51 +67,59 @@ exports.configuration = (socket, io) => {
     configData.numOfTablets += tabletServer.tablets;
 
     if (configData.tabletServerCounter == process.env.TABLET_SERVER_LIMIT) {
-      console.log(`[SERVER] Project is now ready to simulation.`);
+      console.log(`[MASTER] Project is now ready to simulation.`);
       divideData(configData, socket, io);
       socket.emit("updateMetadata",configData);
     }
 
-    console.log(`[SERVER] System has ${configData.numOfTablets} tablets.`);
+    console.log(`[MASTER] System has ${configData.numOfTablets} tablets.`);
     console.log(
-      `[SERVER] one of tablet servers has been connected # tabletServers = ${configData.tabletServerCounter}`
+      `[MASTER] one of tablet servers has been connected # tabletServers = ${configData.tabletServerCounter}`
     );
   });
 
+  socket.on("lazyUpdate", function (data) {
+    console.log(`[MASTER] Server has recieved edit vector`);
+    lazyUpdate(data, socket, io);
+  });
+
+  socket.on("lazyCreate", function (data) {
+    console.log(`[MASTER] Server has recieved created vector from tablet`);
+    lazyCreate(data, socket, io);
+  });
+
   socket.on("lazyDelete", function (data) {
-    console.log(`[SERVER] Server has recieved deleted vector from Tablet`);
+    console.log(`[MASTER] Server has recieved deleted vector from Tablet`);
     lazyDelete(data, socket, io);
   });
 
-  socket.on("sendDeletedVector", async function (data) {
-    console.log("[SERVER] Recieved Data should be deleted from other Tablet");
-
+  socket.on("deleteAndRebalance", async function (data) {
     var DeletedVector = data.DeletedVector;
 
-    if (DeletedVector[0].length > 0)
-      DeletedVector[0].map(async (el) => {
+    console.log("[MASTER] Recieved Data should be deleted from other Tablet");
+    console.log(DeletedVector);
+
+    DeletedVector.map((vector) => {
+      vector.map(async (el) => {
         console.log(`[MASTER] row :  ${el} has been deleted`);
         await Movie.findOneAndDelete({ id: el });
       });
+    });
 
-    if (DeletedVector[1].length > 0)
-      DeletedVector[1].map(async (el) => {
-        console.log(`[MASTER] row : ${el} has been deleted`);
-        await Movie.findOneAndDelete({ id: el });
-      });
-
-    console.log("__________Update__________");
-    console.log(DeletedVector);
-
-    const movies = await Movie.find();
+    console.log("__________________Re-balance Stage__________");
+    const movies = await Movie.find().sort({ createdAt: 1 });
 
     var IDs = Array.from({ length: movies.length }, (_, i) => i + 1);
 
     movies.forEach((movie, index) => {
       movie.id = IDs[index];
     });
+
     await Movie.deleteMany();
     await Movie.insertMany(movies);
+
+    console.log(`[MASTER] finish updating master`);
+
     divideData(configData, socket, io);
   });
 };
@@ -120,22 +128,35 @@ const lazyDelete = async (data, socket, io) => {
   let DeletedVector = data.DeletedVector;
   let tabletServerID = data.tabletServer;
 
+  console.log(`[Master] recieve deleted vector from server: ${tabletServerID}`);
 
-  if (DeletedVector[0].length > 0)
-    DeletedVector[0].map(async (el) => {
+  DeletedVector.map((vector) => {
+    vector.map(async (el) => {
       console.log(`[MASTER] row :  ${el} has been deleted`);
       await Movie.findOneAndDelete({ id: el });
     });
-
-  if (DeletedVector[1].length > 0)
-    DeletedVector[1].map(async (el) => {
-      console.log(`[MASTER] row : ${el} has been deleted`);
-      await Movie.findOneAndDelete({ id: el });
-    });
+  });
 
   let otherServerID = tabletServerID % 2;
-  let OtherServer = configData.tabletServers[otherServerID];
-  let socketID = OtherServer.socketID;
-
+  let socketID = configData.tabletServers[otherServerID].socketID;
+  console.log(
+    `[MASTER] Send re-balance request to the server: ${otherServerID}`
+  );
   io.to(socketID).emit("reBalance", {});
+};
+const lazyUpdate = async (data, socket, io) => {
+  var ids = data.editIDs;
+  var movies = data.editMovies;
+
+  movies.forEach(async (movie, index) => {
+    await Movie.findOneAndUpdate({ id: ids[index] }, movie);
+    console.log(`[MASTER] update movie id: ${ids[index]}`);
+  });
+};
+const lazyCreate = async (data, socket, io) => {
+  let tablets1 = data.createdVector1;
+  let tablets2 = data.createdVector2;
+
+  let tablets = tablets1.concat(tablets2);
+  await Movie.insertMany(tablets);
 };
