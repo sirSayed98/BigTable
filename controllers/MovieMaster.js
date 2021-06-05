@@ -69,6 +69,7 @@ exports.configuration = (socket, io) => {
     if (configData.tabletServerCounter == process.env.TABLET_SERVER_LIMIT) {
       console.log(`[MASTER] Project is now ready to simulation.`);
       divideData(configData, socket, io);
+      socket.emit("updateMetadata",configData);
     }
 
     console.log(`[MASTER] System has ${configData.numOfTablets} tablets.`);
