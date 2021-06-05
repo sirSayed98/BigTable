@@ -31,7 +31,7 @@ app.use("/", (req, res, next) => {
     mutex
       .runExclusive(() => {
         console.log("[TABLET] acquire lock");
-        sleep(15000); // 15 seconds
+        //sleep(15000); // 15 seconds
         next();
       })
       .then(() => {
