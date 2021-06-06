@@ -33,7 +33,7 @@ Socket.emit("status", {
 Socket.on("metaTable", async function (data) {
   metaTable = data;
   console.log(`[TABLET] received metatable `);
-  //console.log(metaTable);
+  console.log(metaTable);
 });
 
 Socket.on("recieveData", async function (data) {
@@ -56,7 +56,6 @@ Socket.on("recieveData", async function (data) {
   metaTable.endID = tablets[1].endID;
   metaTable.tablets = tablets;
   metaTable.tabletCapacity = process.env.TABLET_CAPACITY * 1;
-  //console.log(metaTable);
 
   setTimeout(async () => {
     await MovieTablet1.db.collection("Movie").deleteMany();
@@ -94,7 +93,6 @@ Socket.on("reBalance", async function (data) {
 });
 
 exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
-
   const arr1 = await MovieTablet1.db
     .collection("Movie")
     .find({ id: { $in: req.body.ids }, deleted: false })

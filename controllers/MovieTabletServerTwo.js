@@ -33,7 +33,7 @@ Socket.emit("status", {
 Socket.on("metaTable", async function (data) {
   metaTable = data;
   console.log(`[TABLET] received metatable `);
-  //console.log(metaTable);
+  console.log(metaTable);
 });
 
 Socket.on("recieveData", async function (data) {

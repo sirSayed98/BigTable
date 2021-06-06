@@ -1,6 +1,7 @@
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const Movie = require("../models/Movie");
+const { emit } = require("../models/MovieMul");
 
 let configData = {
   tabletServerCounter: 0,
@@ -41,22 +42,24 @@ const divideData = async (configData, socket, io) => {
     counter += numOfrows;
   });
 
-  console.log(`[MASTER] Meta Table`);
-  //console.log(configData);
-  // send data to tablet servers
+  // send meta data to tablet servers
   configData.tabletServers.map((el) => {
     var data = Movies.slice(el.dataStartID - 1, el.dataEndID);
     io.to(el.socketID).emit("metaTable", el);
     io.to(el.socketID).emit("recieveData", data);
   });
+
+  //send meta data to clients
+  socket.emit("updateMetadata", configData);
 };
 
 exports.configuration = (socket, io) => {
   configData.tabletServerCounter = io.engine.clientsCount;
   console.log("[MASTER] Master has been instailized socket");
 
-  socket.emit("updateMetadata",configData);
-  
+  //send meta data to clients
+  socket.emit("updateMetadata", configData);
+
   socket.on("status", function (data) {
     var tabletServer = {
       tabletServerID: configData.tabletServerCounter,
@@ -68,15 +71,13 @@ exports.configuration = (socket, io) => {
 
     configData.numOfTablets += tabletServer.tablets;
 
-    if (configData.tabletServerCounter == process.env.TABLET_SERVER_LIMIT) {
-      console.log(`[MASTER] Project is now ready to simulation.`);
-      divideData(configData, socket, io);
-    }
-
-    console.log(`[MASTER] System has ${configData.numOfTablets} tablets.`);
+    console.log(`[MASTER] `);
+    divideData(configData, socket, io);
     console.log(
       `[MASTER] one of tablet servers has been connected # tabletServers = ${configData.tabletServerCounter}`
     );
+
+    console.log(`[MASTER] System has ${configData.numOfTablets} tablets.`);
   });
 
   socket.on("lazyUpdate", function (data) {
@@ -122,6 +123,37 @@ exports.configuration = (socket, io) => {
     console.log(`[MASTER] finish updating master`);
 
     divideData(configData, socket, io);
+  });
+
+  socket.on("disconnect", function () {
+    configData.tabletServerCounter -= 1;
+    configData.numOfTablets -= 2;
+
+    let disconnectedID = socket.id;
+
+    const index = configData.tabletServers.map((el, index) => {
+      if (el.socketID == disconnectedID) {
+        return index;
+      }
+    });
+    let serverID = index + 1;
+
+    console.log(`[MASTER] tablet server ${serverID} has been disconnected`);
+
+    if (configData.tabletServerCounter !== 0) {
+      configData.tabletServers.splice(index, 1);
+      console.log(configData.tabletServers);
+      divideData(configData, socket, io);
+    } else {
+      console.log(`[MASTER] no tablet server are ready`);
+      configData = {
+        tabletServerCounter: 0,
+        numOfTablets: 0,
+        tabletServers: [],
+      };
+      //send meta data to clients
+      socket.emit("updateMetadata", configData);
+    }
   });
 };
 
