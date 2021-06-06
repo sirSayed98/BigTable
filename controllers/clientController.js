@@ -13,11 +13,11 @@ const axiosConfig = {
 
 tabletConnectionList = {
   1:
-    "http://localhost:" +
+    "http://105.196.66.71:" +
     process.env.TABLET_SERVER_ONE_PORT +
     "/movie/client/tabletServer1",
   2:
-    "http://localhost:" +
+    "http://105.196.66.71:" +
     process.env.TABLET_SERVER_TWO_PORT +
     "/movie/client/tabletServer2",
 };
@@ -28,21 +28,34 @@ let metadata = null;
 
 let Socket = null;
 
+exports.updatemetadata= (newMetaData)=>{
+  if (metadata == null) {
+    firstConnection = true;
+  }
+  metadata = newMetaData;
+  console.log("[CLIENT] metadata is updated");
+
+  if (firstConnection) {
+    readInputs();
+  }
+}
+
 exports.configure = (socket) => {
   Socket = socket;
+};
 
-  Socket.on("updateMetadata", function (sentData) {
-    if (metadata == null) {
-      firstConnection = true;
-    }
-    metadata = sentData;
-    console.log("[CLIENT] metadata is updated");
-
-    if (firstConnection) {
-      readInputs();
+function getMaxTabletServer(){
+  let maxTablet = 1;
+  let maxValue = -1;
+  
+  metadata.tabletServers.map((el) => {
+    if ( maxValue < el.dataEndID) {
+      maxValue = el.dataEndID;
+      maxTablet = el.tabletServerID;
     }
   });
-};
+  return maxTablet;
+}
 
 function getTabletServerNumber(id) {
   //return 1;//remove outside of testing
@@ -51,7 +64,7 @@ function getTabletServerNumber(id) {
   let tabletNumber = -1;
   metadata.tabletServers.map((el) => {
     if (el.dataStartID <= id && el.dataEndID >= id) {
-      tabletNumber = count;
+      tabletNumber = el.tabletServerID;
     }
     count += 1;
   });
@@ -124,7 +137,7 @@ function handleAddRowRequest() {
     ])
 
     .then((answer) => {
-      let tabletNumber = 1; //todo what should we do in case of add new row ??
+      let tabletNumber = getMaxTabletServer();
       let rowValueStringList = answer.requestData.replace(/ /g, "").split(",");
       let requestJson = {};
       rowValueStringList.forEach((value) => {
@@ -249,6 +262,7 @@ function handleDeleteRowRequest() {
       let counter = 0;
       results.forEach((result) => {
         if (result.status == "rejected") {
+          console.log(result.value);
           console.log(`failed to delete ${sentIdsList[counter].ids}`);
         } else {
           console.log(`successfully deleted ${sentIdsList[counter].ids}`);
@@ -315,9 +329,9 @@ function handleReadRowRequest() {
         } else {
           console.log(
             `successfully fetched ${sentIdsList[counter].ids}` +
-              "\n" +
-              result.data
+              "\n" 
           );
+          console.log(result.value.data);
         }
         counter += 1;
       });
