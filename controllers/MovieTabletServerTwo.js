@@ -10,6 +10,10 @@ const Socket = io.connect(process.env.MASTER_SERVER_HOST);
 const MovieTablet3 = connectToDB(process.env.TABLET_SERVER_TWO_ONE_CONN, 3);
 const MovieTablet4 = connectToDB(process.env.TABLET_SERVER_TWO_TWO_CONN, 4);
 
+var Mutex = require("async-mutex").Mutex;
+const mutex = new Mutex();
+const { E_CANCELED } = require("async-mutex");
+
 let metaTable = {};
 let DeletedVector = [[], []];
 
@@ -94,27 +98,33 @@ Socket.on("reBalance", async function (data) {
 });
 
 exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
- 
-  const arr1 = await MovieTablet3.db
-    .collection("Movie")
-    .find({ id: { $in: req.body.ids }, deleted: false })
-    .toArray();
+  let interval = setInterval(async () => {
+    if (!mutex.isLocked()) {
+      const arr1 = await MovieTablet3.db
+        .collection("Movie")
+        .find({ id: { $in: req.body.ids }, deleted: false })
+        .toArray();
 
-  const arr2 = await MovieTablet4.db
-    .collection("Movie")
-    .find({ id: { $in: req.body.ids }, deleted: false })
-    .toArray();
+      const arr2 = await MovieTablet4.db
+        .collection("Movie")
+        .find({ id: { $in: req.body.ids }, deleted: false })
+        .toArray();
 
-  const films = arr1.concat(arr2);
+      const films = arr1.concat(arr2);
 
-  console.log(films);
+      console.log(films);
 
-  res.status(200).json({
-    success: true,
-    count: films.length,
-    data: films,
-  });
-  next();
+      res.status(200).json({
+        success: true,
+        count: films.length,
+        data: films,
+      });
+    } else {
+      console.log(`[TABLAT] don't have key`);
+    }
+    next();
+    clearInterval(interval);
+  }, 1500);
 });
 
 exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
@@ -140,6 +150,9 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
   var t2StartID = metaTable.tablets[1].startID;
   var t2EndID = metaTable.tablets[1].endID;
 
+  var Len1 = DeletedVector[0].length;
+  var Len2 = DeletedVector[1].length;
+
   req.body.ids.forEach((el) => {
     if (t1StartID <= el && el <= t1EndID) {
       DeletedVector[0].push(el);
@@ -149,84 +162,92 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
     }
   });
 
-  var Len1 = DeletedVector[0].length;
-  var Len2 = DeletedVector[1].length;
+  mutex
+    .runExclusive(async () => {
+      console.log(`[TABLET] acquire lock`);
+      await MovieTablet3.db
+        .collection("Movie")
+        .updateMany(
+          { id: { $in: DeletedVector[0] } },
+          { $set: { deleted: true } },
+          { upsert: false }
+        );
 
-  await MovieTablet3.db
-    .collection("Movie")
-    .updateMany(
-      { id: { $in: DeletedVector[0] } },
-      { $set: { deleted: true } },
-      { upsert: false }
-    );
+      await MovieTablet4.db
+        .collection("Movie")
+        .updateMany(
+          { id: { $in: DeletedVector[1] } },
+          { $set: { deleted: true } },
+          { upsert: false }
+        );
+    })
+    .then(() => {
+      req.body.ids.forEach((id) => {
+        let startIndex = editIDs.indexOf(id);
+        if (startIndex !== -1) {
+          editMovies.splice(startIndex, 1);
+          editIDs.splice(startIndex, 1);
+          console.log(`[TABLET] Remove ID: ${id} from edit lazy list`);
+        }
+      });
 
-  await MovieTablet4.db
-    .collection("Movie")
-    .updateMany(
-      { id: { $in: DeletedVector[1] } },
-      { $set: { deleted: true } },
-      { upsert: false }
-    );
+      if (2 * (Len1 + Len2) >= metaTable.numOfrows) {
+        //reorder
+        DeletedVector[0].sort(function (a, b) {
+          return a - b;
+        });
+        DeletedVector[1].sort(function (a, b) {
+          return a - b;
+        });
 
-  req.body.ids.forEach((id) => {
-    let startIndex = editIDs.indexOf(id);
-    if (startIndex !== -1) {
-      editMovies.splice(startIndex, 1);
-      editIDs.splice(startIndex, 1);
-      console.log(`[TABLET] Remove ID: ${id} from edit lazy list`);
-    }
-  });
+        console.log(
+          `[TABLET] Send Updated vector to Master before delete and re-balance`
+        );
+        Socket.emit("lazyUpdate", {
+          editMovies,
+          editIDs,
+        });
 
-  if (2 * (Len1 + Len2) >= metaTable.numOfrows) {
-    //reorder
-    DeletedVector[0].sort(function (a, b) {
-      return a - b;
+        editMovies = [];
+        editIDs = [];
+
+        console.log(`[TABLET] Send created Vector to Master`);
+        Socket.emit("lazyCreate", {
+          createdVector1,
+          createdVector2,
+        });
+
+        createdVector1 = [];
+        createdVector2 = [];
+
+        console.log(`[TABLET] Send Deleted Vector to Master`);
+        Socket.emit("lazyDelete", {
+          DeletedVector,
+          tabletID,
+          tabletServer: metaTable.tabletServerID,
+        });
+
+        DeletedVector[0] = [];
+        DeletedVector[1] = [];
+
+        return res.status(200).json({
+          success: true,
+          data: DeletedVector,
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: DeletedVector,
+      });
+      next();
+      console.log(`[TABLET] release lock`);
+    })
+    .catch((e) => {
+      if (e === E_CANCELED) {
+        console.log(e);
+      }
     });
-    DeletedVector[1].sort(function (a, b) {
-      return a - b;
-    });
-
-    console.log(
-      `[TABLET] Send Updated vector to Master before delete and re-balance`
-    );
-    Socket.emit("lazyUpdate", {
-      editMovies,
-      editIDs,
-    });
-
-    editMovies = [];
-    editIDs = [];
-
-    console.log(`[TABLET] Send created Vector to Master`);
-    Socket.emit("lazyCreate", {
-      createdVector1,
-      createdVector2,
-    });
-
-    createdVector1 = [];
-    createdVector2 = [];
-
-    console.log(`[TABLET] Send Deleted Vector to Master`);
-    Socket.emit("lazyDelete", {
-      DeletedVector,
-      tabletID,
-      tabletServer: metaTable.tabletServerID,
-    });
-
-    DeletedVector[0] = [];
-    DeletedVector[1] = [];
-
-    return res.status(200).json({
-      success: true,
-      data: DeletedVector,
-    });
-  }
-
-  res.status(200).json({
-    success: true,
-    data: DeletedVector,
-  });
-  next();
 });
 
 exports.updateMovieByID = asyncHandler(async (req, res, next) => {
@@ -254,109 +275,126 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
   var reqBody = Object.values(req.body);
 
   let Movie;
-  if (reqBody[0] === "") {
-    Movie =
-      Tablet == 3
-        ? await MovieTablet3.db
-            .collection("Movie")
-            .updateOne({ id: id }, { $unset: req.body }, { upsert: false })
-        : await MovieTablet4.db
-            .collection("Movie")
-            .updateOne({ id: id }, { $unset: req.body }, { upsert: false });
-  } else {
-    Movie =
-      Tablet == 1
-        ? await MovieTablet3.db
-            .collection("Movie")
-            .updateOne({ id: id }, { $set: req.body }, { upsert: false })
-        : await MovieTablet4.db
-            .collection("Movie")
-            .updateOne({ id: id }, { $set: req.body }, { upsert: false });
-  }
 
-  console.log(`[TABLET] update Movie id: ${id}`);
+  mutex
+    .runExclusive(async () => {
+      console.log(`[TABLET] acquire lock`);
+      if (reqBody[0] === "") {
+        Movie =
+          Tablet == 3
+            ? await MovieTablet3.db
+                .collection("Movie")
+                .updateOne({ id: id }, { $unset: req.body }, { upsert: false })
+            : await MovieTablet4.db
+                .collection("Movie")
+                .updateOne({ id: id }, { $unset: req.body }, { upsert: false });
+      } else {
+        Movie =
+          Tablet == 3
+            ? await MovieTablet3.db
+                .collection("Movie")
+                .updateOne({ id: id }, { $set: req.body }, { upsert: false })
+            : await MovieTablet4.db
+                .collection("Movie")
+                .updateOne({ id: id }, { $set: req.body }, { upsert: false });
+      }
 
-  editMovies.push(req.body);
-  editIDs.push(id);
-  res.status(200).json({ success: true, data: Movie });
+      console.log(`[TABLET] update Movie id: ${id}`);
+    })
+    .then(() => {
+      editMovies.push(req.body);
+      editIDs.push(id);
+      res.status(200).json({ success: true, data: Movie });
 
-  if (2 * editIDs.length >= metaTable.numOfrows) {
-    console.log(`[TABLET] send edit vector to MASTER`);
-    Socket.emit("lazyUpdate", {
-      editMovies,
-      editIDs,
+      if (2 * editIDs.length >= metaTable.numOfrows) {
+        console.log(`[TABLET] send edit vector to MASTER`);
+        Socket.emit("lazyUpdate", {
+          editMovies,
+          editIDs,
+        });
+        editMovies = [];
+        editIDs = [];
+      }
+      next();
+      console.log(`[TABLET] release lock`);
+    })
+    .catch((e) => {
+      if (e === E_CANCELED) {
+        console.log(e);
+      }
     });
-    editMovies = [];
-    editIDs = [];
-  }
-  next();
 });
 
 exports.createMovie = asyncHandler(async (req, res, next) => {
-  if (
-    metaTable.tablets[0].length == metaTable.tabletCapacity &&
-    metaTable.tablets[1].length == metaTable.tabletCapacity
-  ) {
-    console.log(`[MASTER] tablet server capacity is full `);
-    return res
-      .status(500)
-      .json({ message: "Tablet server reached its capacity" });
-  }
+  let interval = setTimeout(async () => {
+    if (!mutex.isLocked()) {
+      if (
+        metaTable.tablets[0].length == metaTable.tabletCapacity &&
+        metaTable.tablets[1].length == metaTable.tabletCapacity
+      ) {
+        console.log(`[MASTER] tablet server capacity is full `);
+        return res
+          .status(500)
+          .json({ message: "Tablet server reached its capacity" });
+      }
 
-  let tablet = createdVector1.length <= createdVector2.length ? 3 : 4;
+      let tablet = createdVector1.length <= createdVector2.length ? 1 : 2;
 
-  console.log(`[TABLET] recieved post req from in tablet ${tablet}`);
+      console.log(`[TABLET] recieved post req from in tablet ${tablet}`);
 
-  metaTable.endID += 1;
+      metaTable.endID += 1;
 
-  req.body.id = metaTable.endID;
-  req.body.createdAt = getTime();
-  req.body.deleted = false;
+      req.body.id = metaTable.endID;
+      req.body.createdAt = getTime();
+      req.body.deleted = false;
 
-  const Movie =
-    tablet == 3
-      ? await MovieTablet3.db.collection("Movie").insertOne(req.body)
-      : await MovieTablet4.db.collection("Movie").insertOne(req.body);
+      const Movie =
+        tablet == 1
+          ? await MovieTablet3.db.collection("Movie").insertOne(req.body)
+          : await MovieTablet4.db.collection("Movie").insertOne(req.body);
 
-  if (tablet == 1) {
-    createdVector1.push(req.body);
-  } else createdVector2.push(req.body);
+      if (tablet == 1) {
+        createdVector1.push(req.body);
+      } else createdVector2.push(req.body);
 
-  console.log(createdVector1);
-  console.log(createdVector2);
+      console.log(createdVector1);
+      console.log(createdVector2);
 
-  if (
-    2 * (createdVector1.length + createdVector2.length) >=
-    metaTable.numOfrows
-  ) {
-    //call reblance
-    console.log(`[MASTER] exceed half capacity`);
+      if (
+        2 * (createdVector1.length + createdVector2.length) >=
+        metaTable.numOfrows
+      ) {
+        //call reblance
+        console.log(`[MASTER] exceed half capacity`);
 
-    Socket.emit("lazyUpdate", {
-      editMovies,
-      editIDs,
-    });
+        Socket.emit("lazyUpdate", {
+          editMovies,
+          editIDs,
+        });
 
-    editMovies = [];
-    editIDs = [];
+        editMovies = [];
+        editIDs = [];
 
-    Socket.emit("lazyCreate", {
-      createdVector1,
-      createdVector2,
-    });
+        Socket.emit("lazyCreate", {
+          createdVector1,
+          createdVector2,
+        });
 
-    createdVector1 = [];
-    createdVector2 = [];
+        createdVector1 = [];
+        createdVector2 = [];
 
-    Socket.emit("lazyDelete", {
-      DeletedVector,
-      tabletServer: metaTable.tabletServerID,
-    });
+        Socket.emit("lazyDelete", {
+          DeletedVector,
+          tabletServer: metaTable.tabletServerID,
+        });
 
-    DeletedVector[0] = [];
-    DeletedVector[1] = [];
-  }
+        DeletedVector[0] = [];
+        DeletedVector[1] = [];
+      }
 
-  res.status(200).send({ data: createdVector1.concat(createdVector2) });
-  next();
+      res.status(200).send({ data: createdVector1.concat(createdVector2) });
+      clearInterval(interval);
+      next();
+    }
+  }, 1500);
 });

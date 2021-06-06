@@ -142,7 +142,6 @@ exports.configuration = (socket, io) => {
 
     if (configData.tabletServerCounter !== 0) {
       configData.tabletServers.splice(index, 1);
-      console.log(configData.tabletServers);
       divideData(configData, socket, io);
     } else {
       console.log(`[MASTER] no tablet server are ready`);
