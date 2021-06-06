@@ -46,13 +46,6 @@ const onConnection = (socket) => {
 
 io.on("connection", onConnection);
 
-io.on("disconnect", function (socket) {
-  tabletServerCounter--;
-
-  console.log(
-    `[MASTER] one of tablet servers has been disconnceted #tabletServers=${tabletServerCounter}`
-  );
-});
 //________________________________________________________________
 
 // Handle unhandled promise rejections
