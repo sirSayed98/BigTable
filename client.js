@@ -8,10 +8,11 @@ const axios = require("axios");
 // Load env vars
 dotenv.config({ path: "./config/.env" });
 
+//const { configure,updatemetadata } = require("./controllers/clientController");
 const Socket = io.connect(process.env.MASTER_SERVER_HOST);
 
-const PORT = process.env.CLIENT_ONE_PORT || 7000;
-const app = express();
+//const PORT = process.env.CLIENT_ONE_PORT || 7000;
+//const app = express();
 
 let metadata = null;
 
