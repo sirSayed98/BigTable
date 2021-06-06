@@ -30,6 +30,7 @@ const divideData = async (configData, socket, io) => {
 
   console.log(`[MASTER] step= ${step}`);
   let numOfrows = 0;
+
   configData.tabletServers.map((el, index) => {
     numOfrows =
       configData.tabletServers.length !== index + 1
@@ -41,6 +42,8 @@ const divideData = async (configData, socket, io) => {
     el.dataEndID = counter + numOfrows - 1;
     counter += numOfrows;
   });
+
+
 
   // send meta data to tablet servers
   configData.tabletServers.map((el) => {
@@ -72,6 +75,7 @@ exports.configuration = (socket, io) => {
     configData.numOfTablets += tabletServer.tablets;
 
     console.log(`[MASTER] `);
+
     divideData(configData, socket, io);
     console.log(
       `[MASTER] one of tablet servers has been connected # tabletServers = ${configData.tabletServerCounter}`
@@ -131,11 +135,9 @@ exports.configuration = (socket, io) => {
 
     let disconnectedID = socket.id;
 
-    const index = configData.tabletServers.map((el, index) => {
-      if (el.socketID == disconnectedID) {
-        return index;
-      }
-    });
+    const index =
+      configData.tabletServers[0].socketID == disconnectedID ? 0 : 1;
+
     let serverID = index + 1;
 
     console.log(`[MASTER] tablet server ${serverID} has been disconnected`);

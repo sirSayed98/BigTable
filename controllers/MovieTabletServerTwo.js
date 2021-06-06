@@ -124,7 +124,7 @@ exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
     }
     next();
     clearInterval(interval);
-  }, 1500);
+  }, 300);
 });
 
 exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
@@ -396,5 +396,5 @@ exports.createMovie = asyncHandler(async (req, res, next) => {
       clearInterval(interval);
       next();
     }
-  }, 1500);
+  }, 300);
 });
