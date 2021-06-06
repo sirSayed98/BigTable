@@ -3,10 +3,9 @@ const {
   createMovie,
   getMoviesTabletServer,
   deleteMovieByID,
-} = require("./MovieTabletServerOne");
+} = require("./MovieTabletServerTwo");
 
 const asyncHandler = require("../middleware/async");
-
 
 //1)set cells 2)delete cells
 exports.editMovie = asyncHandler(async (req, res, next) => {
@@ -32,7 +31,6 @@ exports.deleteMovie = asyncHandler(async (req, res, next) => {
 exports.addMovie = asyncHandler(async (req, res, next) => {
   console.log("[Tablet] recieved Add request");
   createMovie(req, res, next);
-
 });
 
 //5) ->read row(s)
@@ -45,5 +43,3 @@ exports.getMovies = asyncHandler(async (req, res, next) => {
 
   getMoviesTabletServer(req, res, next);
 });
-
-

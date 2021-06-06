@@ -94,10 +94,20 @@ Socket.on("reBalance", async function (data) {
 });
 
 exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
-  const arr1 = await MovieTablet1.db.collection("Movie").find().toArray();
-  const arr2 = await MovieTablet2.db.collection("Movie").find().toArray();
+
+  const arr1 = await MovieTablet1.db
+    .collection("Movie")
+    .find({ id: { $in: req.body.ids }, deleted: false })
+    .toArray();
+
+  const arr2 = await MovieTablet2.db
+    .collection("Movie")
+    .find({ id: { $in: req.body.ids }, deleted: false })
+    .toArray();
 
   const films = arr1.concat(arr2);
+
+  console.log(films);
 
   res.status(200).json({
     success: true,
@@ -124,54 +134,48 @@ exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
 });
 
 exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
-  let id = req.params.id * 1;
-  let tabletID = req.params.tabletID * 1;
-
   var t1StartID = metaTable.tablets[0].startID;
   var t1EndID = metaTable.tablets[0].endID;
 
   var t2StartID = metaTable.tablets[1].startID;
   var t2EndID = metaTable.tablets[1].endID;
 
-  if (
-    (tabletID == 1 && !(t1StartID <= id && id <= t1EndID)) ||
-    (tabletID == 2 && !(t2StartID <= id && id <= t2EndID))
-  ) {
-    return res.status(404).json({
-      success: false,
-      Message: `this id:${id} is not available in this tablet`,
-    });
-  }
-
-  //prevent 2 delete
-  if (DeletedVector[0].includes(id) || DeletedVector[1].includes(id)) {
-    return res.status(404).json({
-      success: false,
-      Message: `this id: ${id} already deleted`,
-    });
-  }
-
-  DeletedVector[tabletID - 1].push(id * 1);
+  req.body.ids.forEach((el) => {
+    if (t1StartID <= el && el <= t1EndID) {
+      DeletedVector[0].push(el);
+    }
+    if (t2StartID <= el && el <= t2EndID) {
+      DeletedVector[1].push(el);
+    }
+  });
 
   var Len1 = DeletedVector[0].length;
   var Len2 = DeletedVector[1].length;
 
-  const movie =
-    tabletID == 1
-      ? await MovieTablet1.db
-          .collection("Movie")
-          .update({ id: id }, { $set: { deleted: true } }, { upsert: false })
-      : await MovieTablet2.db
-          .collection("Movie")
-          .update({ id: id }, { $set: { deleted: true } }, { upsert: false });
+  await MovieTablet1.db
+    .collection("Movie")
+    .updateMany(
+      { id: { $in: DeletedVector[0] } },
+      { $set: { deleted: true } },
+      { upsert: false }
+    );
 
-  let startIndex = editIDs.indexOf(id);
+  await MovieTablet2.db
+    .collection("Movie")
+    .updateMany(
+      { id: { $in: DeletedVector[1] } },
+      { $set: { deleted: true } },
+      { upsert: false }
+    );
 
-  if (startIndex !== -1) {
-    editMovies.splice(startIndex, 1);
-    editIDs.splice(startIndex, 1);
-    console.log(`[TABLET] Remove ID: ${id} from edit lazy list`);
-  }
+  req.body.ids.forEach((id) => {
+    let startIndex = editIDs.indexOf(id);
+    if (startIndex !== -1) {
+      editMovies.splice(startIndex, 1);
+      editIDs.splice(startIndex, 1);
+      console.log(`[TABLET] Remove ID: ${id} from edit lazy list`);
+    }
+  });
 
   if (2 * (Len1 + Len2) >= metaTable.numOfrows) {
     //reorder
@@ -247,14 +251,28 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const Movie =
-    Tablet == 1
-      ? await MovieTablet1.db
-          .collection("Movie")
-          .updateOne({ id: id }, { $set: req.body }, { upsert: false })
-      : await MovieTablet2.db
-          .collection("Movie")
-          .updateOne({ id: id }, { $set: req.body }, { upsert: false });
+  var reqBody = Object.values(req.body);
+
+  let Movie;
+  if (reqBody[0] === "") {
+    Movie =
+      Tablet == 1
+        ? await MovieTablet1.db
+            .collection("Movie")
+            .updateOne({ id: id }, { $unset: req.body }, { upsert: false })
+        : await MovieTablet2.db
+            .collection("Movie")
+            .updateOne({ id: id }, { $unset: req.body }, { upsert: false });
+  } else {
+    Movie =
+      Tablet == 1
+        ? await MovieTablet1.db
+            .collection("Movie")
+            .updateOne({ id: id }, { $set: req.body }, { upsert: false })
+        : await MovieTablet2.db
+            .collection("Movie")
+            .updateOne({ id: id }, { $set: req.body }, { upsert: false });
+  }
 
   console.log(`[TABLET] update Movie id: ${id}`);
 

@@ -153,7 +153,7 @@ function handleAddRowRequest() {
 function convertListToObjectWithNull(list) {
   let newList = {};
   list.map((el) => {
-    newList[el] = null;
+    newList[el] = "";
   });
   return newList;
 }
