@@ -6,10 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node master.js",
-    "master": "nodemon master.js",
-    "tabletserver1": "nodemon TabletServer1.js",
-    "tabletserver2": "nodemon TabletServer2.js",
-    "client": "nodemon client.js"
+    "master": "node master.js",
+    "tabletserver1": "node TabletServer1.js",
+    "tabletserver2": "node TabletServer2.js",
+    "client": "node client.js"
   },
   "repository": {
     "type": "git",

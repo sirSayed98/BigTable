@@ -43,7 +43,8 @@ const divideData = async (configData, socket, io) => {
     counter += numOfrows;
   });
 
-
+  //send meta data to clients
+  socket.emit("updateMetadata", configData);
 
   // send meta data to tablet servers
   configData.tabletServers.map((el) => {
@@ -51,9 +52,7 @@ const divideData = async (configData, socket, io) => {
     io.to(el.socketID).emit("metaTable", el);
     io.to(el.socketID).emit("recieveData", data);
   });
-
-  //send meta data to clients
-  socket.emit("updateMetadata", configData);
+  //axios
 };
 
 exports.configuration = (socket, io) => {
@@ -162,6 +161,8 @@ const lazyDelete = async (data, socket, io) => {
   let DeletedVector = data.DeletedVector;
   let tabletServerID = data.tabletServer;
 
+  console.log(`[MASTER] Confirm lazy delete`);
+
   console.log(`[Master] recieve deleted vector from server: ${tabletServerID}`);
 
   DeletedVector.map((vector) => {
@@ -179,6 +180,7 @@ const lazyDelete = async (data, socket, io) => {
   io.to(socketID).emit("reBalance", {});
 };
 const lazyUpdate = async (data, socket, io) => {
+  console.log(`[MASTER] Confirm lazy update`);
   var ids = data.editIDs;
   var movies = data.editMovies;
 
@@ -191,6 +193,7 @@ const lazyCreate = async (data, socket, io) => {
   let tablets1 = data.createdVector1;
   let tablets2 = data.createdVector2;
 
+  console.log(`[MASTER] Confirm lazy create`);
   let tablets = tablets1.concat(tablets2);
   await Movie.insertMany(tablets);
 };

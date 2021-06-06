@@ -97,34 +97,32 @@ Socket.on("reBalance", async function (data) {
   editIDs = [];
 });
 
+
 exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
-  let interval = setInterval(async () => {
-    if (!mutex.isLocked()) {
-      const arr1 = await MovieTablet3.db
-        .collection("Movie")
-        .find({ id: { $in: req.body.ids }, deleted: false })
-        .toArray();
+  if (!mutex.isLocked()) {
+    const arr1 = await MovieTablet3.db
+      .collection("Movie")
+      .find({ id: { $in: req.body.ids }, deleted: false })
+      .toArray();
 
-      const arr2 = await MovieTablet4.db
-        .collection("Movie")
-        .find({ id: { $in: req.body.ids }, deleted: false })
-        .toArray();
+    const arr2 = await MovieTablet4.db
+      .collection("Movie")
+      .find({ id: { $in: req.body.ids }, deleted: false })
+      .toArray();
 
-      const films = arr1.concat(arr2);
+    const films = arr1.concat(arr2);
 
-      console.log(films);
+    console.log(films);
 
-      res.status(200).json({
-        success: true,
-        count: films.length,
-        data: films,
-      });
-    } else {
-      console.log(`[TABLAT] don't have key`);
-    }
-    next();
-    clearInterval(interval);
-  }, 300);
+    res.status(200).json({
+      success: true,
+      count: films.length,
+      data: films,
+    });
+  } else {
+    console.log(`[TABLAT] don't have key`);
+  }
+  next();
 });
 
 exports.getMoviesTabletPartion = asyncHandler(async (req, res, next) => {
@@ -150,9 +148,6 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
   var t2StartID = metaTable.tablets[1].startID;
   var t2EndID = metaTable.tablets[1].endID;
 
-  var Len1 = DeletedVector[0].length;
-  var Len2 = DeletedVector[1].length;
-
   req.body.ids.forEach((el) => {
     if (t1StartID <= el && el <= t1EndID) {
       DeletedVector[0].push(el);
@@ -161,6 +156,9 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
       DeletedVector[1].push(el);
     }
   });
+
+  var Len1 = DeletedVector[0].length;
+  var Len2 = DeletedVector[1].length;
 
   mutex
     .runExclusive(async () => {
@@ -223,7 +221,6 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
         console.log(`[TABLET] Send Deleted Vector to Master`);
         Socket.emit("lazyDelete", {
           DeletedVector,
-          tabletID,
           tabletServer: metaTable.tabletServerID,
         });
 
@@ -326,75 +323,72 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
 });
 
 exports.createMovie = asyncHandler(async (req, res, next) => {
-  let interval = setTimeout(async () => {
-    if (!mutex.isLocked()) {
-      if (
-        metaTable.tablets[0].length == metaTable.tabletCapacity &&
-        metaTable.tablets[1].length == metaTable.tabletCapacity
-      ) {
-        console.log(`[MASTER] tablet server capacity is full `);
-        return res
-          .status(500)
-          .json({ message: "Tablet server reached its capacity" });
-      }
-
-      let tablet = createdVector1.length <= createdVector2.length ? 1 : 2;
-
-      console.log(`[TABLET] recieved post req from in tablet ${tablet}`);
-
-      metaTable.endID += 1;
-
-      req.body.id = metaTable.endID;
-      req.body.createdAt = getTime();
-      req.body.deleted = false;
-
-      const Movie =
-        tablet == 1
-          ? await MovieTablet3.db.collection("Movie").insertOne(req.body)
-          : await MovieTablet4.db.collection("Movie").insertOne(req.body);
-
-      if (tablet == 1) {
-        createdVector1.push(req.body);
-      } else createdVector2.push(req.body);
-
-      console.log(createdVector1);
-      console.log(createdVector2);
-
-      if (
-        2 * (createdVector1.length + createdVector2.length) >=
-        metaTable.numOfrows
-      ) {
-        //call reblance
-        console.log(`[MASTER] exceed half capacity`);
-
-        Socket.emit("lazyUpdate", {
-          editMovies,
-          editIDs,
-        });
-
-        editMovies = [];
-        editIDs = [];
-
-        Socket.emit("lazyCreate", {
-          createdVector1,
-          createdVector2,
-        });
-
-        createdVector1 = [];
-        createdVector2 = [];
-
-        Socket.emit("lazyDelete", {
-          DeletedVector,
-          tabletServer: metaTable.tabletServerID,
-        });
-
-        DeletedVector[0] = [];
-        DeletedVector[1] = [];
-      }
-
-      res.status(200).send({ data: createdVector1.concat(createdVector2) });
-      clearInterval(interval);
-      next();
+  if (!mutex.isLocked()) {
+    if (
+      metaTable.tablets[0].length == metaTable.tabletCapacity &&
+      metaTable.tablets[1].length == metaTable.tabletCapacity
+    ) {
+      console.log(`[MASTER] tablet server capacity is full `);
+      return res
+        .status(500)
+        .json({ message: "Tablet server reached its capacity" });
     }
-  }, 300);
+
+    let tablet = createdVector1.length <= createdVector2.length ? 1 : 2;
+
+    console.log(`[TABLET] recieved post req from in tablet ${tablet}`);
+
+    metaTable.endID += 1;
+
+    req.body.id = metaTable.endID;
+    req.body.createdAt = getTime();
+    req.body.deleted = false;
+
+    const Movie =
+      tablet == 1
+        ? await MovieTablet3.db.collection("Movie").insertOne(req.body)
+        : await MovieTablet4.db.collection("Movie").insertOne(req.body);
+
+    if (tablet == 1) {
+      createdVector1.push(req.body);
+    } else createdVector2.push(req.body);
+
+    console.log(createdVector1);
+    console.log(createdVector2);
+
+    if (
+      2 * (createdVector1.length + createdVector2.length) >=
+      metaTable.numOfrows
+    ) {
+      //call reblance
+      console.log(`[MASTER] exceed half capacity`);
+
+      Socket.emit("lazyUpdate", {
+        editMovies,
+        editIDs,
+      });
+
+      editMovies = [];
+      editIDs = [];
+
+      Socket.emit("lazyCreate", {
+        createdVector1,
+        createdVector2,
+      });
+
+      createdVector1 = [];
+      createdVector2 = [];
+
+      Socket.emit("lazyDelete", {
+        DeletedVector,
+        tabletServer: metaTable.tabletServerID,
+      });
+
+      DeletedVector[0] = [];
+      DeletedVector[1] = [];
+    }
+
+    res.status(200).send({ data: createdVector1.concat(createdVector2) });
+    next();
+  }
 });
