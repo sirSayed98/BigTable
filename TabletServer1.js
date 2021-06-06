@@ -18,9 +18,10 @@ app.use(express.json());
 
 // load Routers
 const MoviesRouter = require("./routes/MovieTabletServer1");
-
+const ClientRouter = require("./routes/Tablet1ClientRouter");
 
 app.use("/Movies/Tablet", MoviesRouter);
+app.use("/movie/client/tabletServer1", ClientRouter);
 
 // errorHandler
 app.use(errorHandler);

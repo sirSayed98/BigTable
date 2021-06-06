@@ -55,6 +55,8 @@ exports.configuration = (socket, io) => {
   configData.tabletServerCounter = io.engine.clientsCount;
   console.log("[MASTER] Master has been instailized socket");
 
+  socket.emit("updateMetadata",configData);
+  
   socket.on("status", function (data) {
     var tabletServer = {
       tabletServerID: configData.tabletServerCounter,
@@ -69,7 +71,6 @@ exports.configuration = (socket, io) => {
     if (configData.tabletServerCounter == process.env.TABLET_SERVER_LIMIT) {
       console.log(`[MASTER] Project is now ready to simulation.`);
       divideData(configData, socket, io);
-      socket.emit("updateMetadata",configData);
     }
 
     console.log(`[MASTER] System has ${configData.numOfTablets} tablets.`);
