@@ -9,7 +9,8 @@
     "master": "node master.js",
     "tabletserver1": "node TabletServer1.js",
     "tabletserver2": "node TabletServer2.js",
-    "client": "node client.js"
+    "client1": "node clientOne.js",
+    "client2": "node clientTwo.js"
   },
   "repository": {
     "type": "git",

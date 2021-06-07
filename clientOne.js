@@ -37,8 +37,7 @@ const server = app.listen(PORT, console.log(`Client running on port ${PORT}`));
 app.use("/recieveMeta", (req, res, next) => {
   console.log("[CLIENT] metadata is updated");
   metadata = req.body;
-  console.log(metadata);
-  console.log(req);
+  
   res.end("any");
 });
 
