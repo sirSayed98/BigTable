@@ -19,8 +19,8 @@ app.use(express.json());
 let metadata = null;
 
 Socket.on("connect", function (co) {
-  console.log("[client] a new client is connected to master");
-  Socket.emit("logging","[client] a new client is connected to master");
+  console.log("[CLIENT2] a new client is connected to master");
+  Socket.emit("logging","[CLIENT2] a new client is connected to master");
 });
 
 Socket.on("updateMetadata", function (sentData) {
@@ -28,17 +28,17 @@ Socket.on("updateMetadata", function (sentData) {
     firstConnection = true;
   }
   metadata = sentData;
-  console.log("[client] metadata is updated");
-  Socket.emit("logging","[client] metadata is updated");
+  console.log("[CLIENT2] metadata is updated");
+  Socket.emit("logging","[CLIENT2] metadata is updated");
   readInputs();
 });
 
 const server = app.listen(PORT, console.log(`Client running on port ${PORT}`));
 
 app.use("/recieveMeta", (req, res, next) => {
-  console.log("[client] metadata is updated");
+  console.log("[CLIENT2] metadata is updated");
   metadata = req.body;
-  Socket.emit("logging","[client] metadata is updated");
+  Socket.emit("logging","[CLIENT2] metadata is updated");
   res.end("any");
 });
 
@@ -138,12 +138,12 @@ function handleSetRequest() {
       );
     })
     .then(function (response) {
-      console.log(`[client] row of id = ${rowId} successfully updated`);
-      Socket.emit("logging",`[client] row of id = ${rowId} successfully updated`);
+      console.log(`[CLIENT2] row of id = ${rowId} successfully updated`);
+      Socket.emit("logging",`[CLIENT2] row of id = ${rowId} successfully updated`);
     })
     .catch(function (error) {
       console.log(error);
-      Socket.emit("logging",`[client] failed to update row id = ${rowId}`);
+      Socket.emit("logging",`[CLIENT2] failed to update row id = ${rowId}`);
     })
     .then(function () {
       askIfFinished();
@@ -183,12 +183,12 @@ function handleAddRowRequest() {
     }) // send data
 
     .then(function (response) {
-      console.log(`[client] new row added successfully`);
-      Socket.emit("logging",`[client] new row added successfully`);
+      console.log(`[CLIENT2] new row added successfully`);
+      Socket.emit("logging",`[CLIENT2] new row added successfully`);
     })
     .catch(function (error) {
-      console.log(`[client] failed to add new row`);
-      Socket.emit("logging",`[client] failed to add new row`);
+      console.log(`[CLIENT2] failed to add new row`);
+      Socket.emit("logging",`[CLIENT2] failed to add new row`);
     })
     .then(function () {
       askIfFinished();
@@ -240,12 +240,12 @@ function handleDeleteCellsRequest() {
       );
     })
     .then(function (response) {
-      console.log(`[client] cells deleted successfully`);
-      Socket.emit("logging",`[client] cells deleted successfully`);
+      console.log(`[CLIENT2] cells deleted successfully`);
+      Socket.emit("logging",`[CLIENT2] cells deleted successfully`);
     })
     .catch(function (error) {
-      console.log(`[client] failed to delete cells from row : ${rowId}`);
-      Socket.emit("logging",`[client] failed to delete cells from row : ${rowId}`);
+      console.log(`[CLIENT2] failed to delete cells from row : ${rowId}`);
+      Socket.emit("logging",`[CLIENT2] failed to delete cells from row : ${rowId}`);
     })
     .then(function () {
       askIfFinished();
@@ -296,11 +296,11 @@ function handleDeleteRowRequest() {
       results.forEach((result) => {
         if (result.status == "rejected") {
           //console.log(result.value);
-          console.log(`[client] failed to delete ${sentIdsList[counter].ids}`);
-          Socket.emit("logging",`[client] failed to delete ${sentIdsList[counter].ids}`);
+          console.log(`[CLIENT2] failed to delete ${sentIdsList[counter].ids}`);
+          Socket.emit("logging",`[CLIENT2] failed to delete ${sentIdsList[counter].ids}`);
         } else {
-          console.log(`[client] successfully deleted ${sentIdsList[counter].ids}`);
-          Socket.emit("logging",`[client] successfully deleted ${sentIdsList[counter].ids}`);
+          console.log(`[CLIENT2] successfully deleted ${sentIdsList[counter].ids}`);
+          Socket.emit("logging",`[CLIENT2] successfully deleted ${sentIdsList[counter].ids}`);
         }
         counter += 1;
       });
@@ -360,14 +360,14 @@ function handleReadRowRequest() {
       let counter = 0;
       results.forEach((result) => {
         if (result.status == "rejected") {
-          console.log(`[client] failed to fetch ${sentIdsList[counter].ids}`);
-          Socket.emit("logging",`[client] failed to fetch ${sentIdsList[counter].ids}`);
+          console.log(`[CLIENT2] failed to fetch ${sentIdsList[counter].ids}`);
+          Socket.emit("logging",`[CLIENT2] failed to fetch ${sentIdsList[counter].ids}`);
           
         } else {
           console.log(
-            `[client] successfully fetched ${sentIdsList[counter].ids}` + "\n"
+            `[CLIENT2] successfully fetched ${sentIdsList[counter].ids}` + "\n"
           );
-          Socket.emit("logging",`[client] successfully fetched ${sentIdsList[counter].ids}`);
+          Socket.emit("logging",`[CLIENT2] successfully fetched ${sentIdsList[counter].ids}`);
           console.log(result.value.data);
         }
         counter += 1;

@@ -88,7 +88,6 @@ const divideData = async (configData, socket, io) => {
 };
 
 exports.configuration = (socket, io) => {
- 
   console.log("[MASTER] Master has been instailized socket");
   fs.appendFile(
     loggingFilePath,
@@ -217,10 +216,12 @@ exports.configuration = (socket, io) => {
   });
 
   socket.on("disconnect", function () {
-    if (
-      socket.id === configData.tabletServers[0].socketID ||
-      socket.id === configData.tabletServers[1].socketID
-    ) {
+    let flag = false;
+    configData.tabletServers.forEach((el) => {
+      if (el.socketID === socket.id) flag = true;
+    });
+
+    if (flag) {
       configData.tabletServerCounter -= 1;
       configData.numOfTablets -= 2;
 
