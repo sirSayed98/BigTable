@@ -1,32 +1,50 @@
 [MASTER] Master has been instailized socket
 [MASTER] one of tablet servers has been connected # tabletServers = 1
 [MASTER] System has 2 tablets.
-[TABLET] Tablet Server1 has been connected to the master server!
-[MASTER] step= 10
-[TABLET] received metatable 
+[TABLET1] Tablet Server1 has been connected to the master server!
+[MASTER] step= 600
+[TABLET1] received metatable 
 [MASTER] Master has been instailized socket
 [MASTER] one of tablet servers has been connected # tabletServers = 2
 [MASTER] System has 4 tablets.
-[TABLET] Tablet Server2 has been connected to the master server!
-[MASTER] step= 5
-[TABLET] received metatable 
-[TABLET] received metatable 
+[TABLET2] Tablet Server2 has been connected to the master server!
+[MASTER] step= 300
+[TABLET1] received metatable 
+[TABLET2] received metatable 
 [MASTER] Master has been instailized socket
 [client] a new client is connected to master
 [CLIENT] metadata is updated
-[client] successfully fetched 1,2,3,4
-[TABLET] acquire lock
-[TABLET] update Movie id: 1
-[client] cells deleted successfully
-[TABLET] release lock
-[TABLET] acquire lock
-[TABLET] Remove ID: 1 from edit lazy list
-[TABLET] release lock
-[client] successfully deleted 1,2,3
-[TABLET] recieved post req from in tablet 1
-[client] new row added successfully
-[client] successfully fetched 1,2,10
-[client] successfully fetched 11
-[MASTER] tablet server 2 has been disconnected
-[MASTER] step= 10
-[TABLET] received metatable 
+[MASTER] Master has been instailized socket
+[client] a new client is connected to master
+[client] metadata is updated
+[MASTER]  A client has been disconnect[MASTER]  A client has been disconnect[MASTER] tablet server 1 has been disconnected
+[MASTER] step= 600
+[TABLET2] received metatable 
+[MASTER] tablet server 1 has been disconnected
+[MASTER] no tablet server are ready
+[MASTER] Master has been instailized socket
+[MASTER] one of tablet servers has been connected # tabletServers = 1
+[MASTER] System has 2 tablets.
+[TABLET1] Tablet Server1 has been connected to the master server!
+[MASTER] step= 600
+[TABLET1] received metatable 
+[MASTER] Master has been instailized socket
+[MASTER] one of tablet servers has been connected # tabletServers = 2
+[TABLET2] Tablet Server2 has been connected to the master server!
+[MASTER] System has 4 tablets.
+[MASTER] step= 300
+[TABLET1] received metatable 
+[TABLET2] received metatable 
+[MASTER] Master has been instailized socket
+[client] a new client is connected to master
+[CLIENT] metadata is updated
+[MASTER] Master has been instailized socket
+[client] metadata is updated
+[client] a new client is connected to master
+[client] successfully fetched 1
+[client] successfully fetched 700
+[MASTER] tablet server 1 has been disconnected
+[MASTER] step= 600
+[TABLET2] received metatable 
+[CLIENT] metadata is updated
+[client] metadata is updated
