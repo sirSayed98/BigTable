@@ -27,6 +27,7 @@ Socket.on("connect", function (so) {
   console.log(
     "[TABLET] Tablet Server2 has been connected to the master server!"
   );
+  Socket.emit("logging","[TABLET] Tablet Server2 has been connected to the master server!");
 });
 
 //send Status of TabletServer to Master Server
@@ -37,6 +38,7 @@ Socket.emit("status", {
 Socket.on("metaTable", async function (data) {
   metaTable = data;
   console.log(`[TABLET] received metatable `);
+  Socket.emit("logging",`[TABLET] received metatable `);
   console.log(metaTable);
 });
 
@@ -72,20 +74,25 @@ Socket.on("recieveData", async function (data) {
 
 Socket.on("reBalance", async function (data) {
   console.log(`[TABLET] Recieved re-balance request`);
-
+  Socket.emit("logging",`[TABLET] Recieved re-balance request`);
+  
   console.log(`[TABLET] Send Editied vector`);
+  Socket.emit("logging",`[TABLET] Send Editied vector`);
+  
   Socket.emit("lazyUpdate", {
     editMovies,
     editIDs,
   });
 
   console.log(`[TABLET] Send created Vector to Master`);
+  Socket.emit("logging",`[TABLET] Send created Vector to Master`);
   Socket.emit("lazyCreate", {
     createdVector1,
     createdVector2,
   });
 
   console.log(`[TABLET] Send Deleted vector`);
+  Socket.emit("logging",`[TABLET] Send Deleted vector`);
   Socket.emit("deleteAndRebalance", { DeletedVector });
 
   //remove from table
@@ -121,6 +128,7 @@ exports.getMoviesTabletServer = asyncHandler(async (req, res, next) => {
     });
   } else {
     console.log(`[TABLAT] don't have key`);
+    Socket.emit("logging",`[TABLAT] don't have key`);
   }
   next();
 });
@@ -163,6 +171,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
   mutex
     .runExclusive(async () => {
       console.log(`[TABLET] acquire lock`);
+      Socket.emit("logging",`[TABLET] acquire lock`);
       await MovieTablet3.db
         .collection("Movie")
         .updateMany(
@@ -186,6 +195,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
           editMovies.splice(startIndex, 1);
           editIDs.splice(startIndex, 1);
           console.log(`[TABLET] Remove ID: ${id} from edit lazy list`);
+          Socket.emit("logging",`[TABLET] Remove ID: ${id} from edit lazy list`);
         }
       });
 
@@ -201,6 +211,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
         console.log(
           `[TABLET] Send Updated vector to Master before delete and re-balance`
         );
+        Socket.emit("logging",`[TABLET] Send Updated vector to Master before delete and re-balance`);
         Socket.emit("lazyUpdate", {
           editMovies,
           editIDs,
@@ -210,6 +221,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
         editIDs = [];
 
         console.log(`[TABLET] Send created Vector to Master`);
+        Socket.emit("logging",`[TABLET] Send created Vector to Master`);
         Socket.emit("lazyCreate", {
           createdVector1,
           createdVector2,
@@ -219,6 +231,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
         createdVector2 = [];
 
         console.log(`[TABLET] Send Deleted Vector to Master`);
+        Socket.emit("logging",`[TABLET] Send Deleted Vector to Master`);
         Socket.emit("lazyDelete", {
           DeletedVector,
           tabletServer: metaTable.tabletServerID,
@@ -239,6 +252,7 @@ exports.deleteMovieByID = asyncHandler(async (req, res, next) => {
       });
       next();
       console.log(`[TABLET] release lock`);
+      Socket.emit("logging",`[TABLET] release lock`);
     })
     .catch((e) => {
       if (e === E_CANCELED) {
@@ -276,6 +290,7 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
   mutex
     .runExclusive(async () => {
       console.log(`[TABLET] acquire lock`);
+      Socket.emit("logging",`[TABLET] acquire lock`);
       if (reqBody[0] === "") {
         Movie =
           Tablet == 3
@@ -297,6 +312,7 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
       }
 
       console.log(`[TABLET] update Movie id: ${id}`);
+      Socket.emit("logging",`[TABLET] update Movie id: ${id}`);
     })
     .then(() => {
       editMovies.push(req.body);
@@ -305,6 +321,7 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
 
       if (2 * editIDs.length >= metaTable.numOfrows) {
         console.log(`[TABLET] send edit vector to MASTER`);
+        Socket.emit("logging",`[TABLET] send edit vector to MASTER`);
         Socket.emit("lazyUpdate", {
           editMovies,
           editIDs,
@@ -314,6 +331,7 @@ exports.updateMovieByID = asyncHandler(async (req, res, next) => {
       }
       next();
       console.log(`[TABLET] release lock`);
+      Socket.emit("logging",`[TABLET] release lock`);
     })
     .catch((e) => {
       if (e === E_CANCELED) {
@@ -329,6 +347,7 @@ exports.createMovie = asyncHandler(async (req, res, next) => {
       metaTable.tablets[1].length == metaTable.tabletCapacity
     ) {
       console.log(`[MASTER] tablet server capacity is full `);
+      Socket.emit("logging",`[MASTER] tablet server capacity is full `);
       return res
         .status(500)
         .json({ message: "Tablet server reached its capacity" });
@@ -337,7 +356,7 @@ exports.createMovie = asyncHandler(async (req, res, next) => {
     let tablet = createdVector1.length <= createdVector2.length ? 1 : 2;
 
     console.log(`[TABLET] recieved post req from in tablet ${tablet}`);
-
+    Socket.emit("logging",`[TABLET] recieved post req from in tablet ${tablet}`);
     metaTable.endID += 1;
 
     req.body.id = metaTable.endID;
@@ -362,7 +381,7 @@ exports.createMovie = asyncHandler(async (req, res, next) => {
     ) {
       //call reblance
       console.log(`[MASTER] exceed half capacity`);
-
+      Socket.emit("logging",`[MASTER] exceed half capacity`);
       Socket.emit("lazyUpdate", {
         editMovies,
         editIDs,
