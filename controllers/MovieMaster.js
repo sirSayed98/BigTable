@@ -3,6 +3,8 @@ const asyncHandler = require("../middleware/async");
 const Movie = require("../models/Movie");
 const { emit } = require("../models/MovieMul");
 
+const axios = require("axios");
+
 let configData = {
   tabletServerCounter: 0,
   numOfTablets: 0,
@@ -53,6 +55,23 @@ const divideData = async (configData, socket, io) => {
     io.to(el.socketID).emit("recieveData", data);
   });
   //axios
+
+  const axiosConfig = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+  
+  let url = process.env.CLIENT_SERVER_BASE_URL+":"+process.env.CLIENT_ONE_PORT+"/recieveMeta"
+  axios.put(url,configData,axiosConfig)
+  .then((myres)=>{})
+  .catch((err)=>{});
+
+  url = process.env.CLIENT_SERVER_BASE_URL+":"+process.env.CLIENT_TWO_PORT+"/recieveMeta"
+  axios.put(url,configData,axiosConfig)
+  .then((myres)=>{})
+  .catch((err)=>{});
+  
 };
 
 exports.configuration = (socket, io) => {
