@@ -79,6 +79,7 @@ function getMaxTabletServer() {
     if (maxValue < el.dataEndID) {
       maxValue = el.dataEndID;
       maxTablet = el.tabletServerID;
+      el.dataEndID +=1;
     }
   });
   return maxTablet;
